@@ -1,6 +1,6 @@
 use std::ops;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Tuple(pub f64, pub f64, pub f64, pub f64);
 
 impl PartialEq for Tuple {

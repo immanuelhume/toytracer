@@ -1,33 +1,33 @@
 use crate::color::Color;
 
 pub struct Canvas {
-    width: u64,
-    height: u64,
+    width: usize,
+    height: usize,
     pixels: Vec<Color>,
 }
 
 impl Canvas {
-    pub fn new(width: u64, height: u64) -> Self {
+    pub fn new(width: usize, height: usize) -> Self {
         Self {
             width,
             height,
-            pixels: vec![Color::new(0.0, 0.0, 0.0); (width * height) as usize],
+            pixels: vec![Color::new(0.0, 0.0, 0.0); width * height],
         }
     }
 
     /// Writes the color at some pixel. If the specified coordinate is beyond the initialized size,
     /// it is ignored.
-    pub fn draw(&mut self, x: u64, y: u64, color: Color) {
+    pub fn draw(&mut self, x: usize, y: usize, color: Color) {
         if x >= self.width || y >= self.height {
             return;
         }
         let idx = y * self.width + x;
-        self.pixels[idx as usize] = color;
+        self.pixels[idx] = color;
     }
 
-    fn pixel_at(&self, x: u64, y: u64) -> Color {
+    fn pixel_at(&self, x: usize, y: usize) -> Color {
         let idx = y * self.width + x;
-        self.pixels[idx as usize]
+        self.pixels[idx]
     }
 
     /// Exports the current canvas as a PPM format string.
@@ -35,7 +35,7 @@ impl Canvas {
         let mut hdr = format!("P3\n{} {}\n255\n", self.width, self.height);
         let pxs = self
             .pixels
-            .chunks(self.width as usize)
+            .chunks(self.width)
             .flat_map(|row| {
                 let nums: Vec<String> = row
                     .into_iter()
@@ -76,7 +76,7 @@ impl Canvas {
         hdr
     }
 
-    pub fn height(&self) -> u64 {
+    pub fn height(&self) -> usize {
         self.height
     }
 }
