@@ -1,8 +1,27 @@
 use crate::tuple::Tuple;
+use crate::F64_EPS;
 use std::ops;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct Matrix<const M: usize, const N: usize>([[f64; N]; M]);
+
+impl<const M: usize, const N: usize> PartialEq for Matrix<M, N> {
+    fn eq(&self, other: &Self) -> bool {
+        for i in 0..M {
+            for j in 0..N {
+                if (self.0[i][j] - other.0[i][j]).abs() > F64_EPS {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+}
+
+#[derive(Debug)]
+enum Error {
+    Uninvertible,
+}
 
 impl<const M: usize, const N: usize> Matrix<M, N> {
     fn new(xss: [[f64; N]; M]) -> Self {
@@ -34,6 +53,10 @@ impl Matrix<2, 2> {
         let [[a, b], [c, d]] = self.0;
         a * d - b * c
     }
+
+    fn is_invertible(&self) -> bool {
+        self.det() != 0.0
+    }
 }
 
 impl Matrix<3, 3> {
@@ -58,6 +81,10 @@ impl Matrix<3, 3> {
         } else {
             -x
         }
+    }
+
+    fn is_invertible(&self) -> bool {
+        self.det() != 0.0
     }
 }
 
@@ -93,6 +120,24 @@ impl Matrix<4, 4> {
         } else {
             -x
         }
+    }
+
+    fn is_invertible(&self) -> bool {
+        self.det() != 0.0
+    }
+
+    fn inverse(&self) -> Result<Self, Error> {
+        if !self.is_invertible() {
+            return Err(Error::Uninvertible);
+        }
+        let mut xss = [[0.0; 4]; 4];
+        let det = self.det();
+        for i in 0..4 {
+            for j in 0..4 {
+                xss[j][i] = self.cofactor(i, j) / det;
+            }
+        }
+        Ok(Self(xss))
     }
 }
 
@@ -160,6 +205,7 @@ impl ops::Mul<Tuple> for Matrix<4, 4> {
 #[cfg(test)]
 mod tests {
     use super::Matrix;
+    use crate::assert_f64_eq;
     use crate::tuple::Tuple;
 
     #[test]
@@ -361,5 +407,108 @@ mod tests {
         assert_eq!(a.cofactor(0, 2), 210.0);
         assert_eq!(a.cofactor(0, 3), 51.0);
         assert_eq!(a.det(), -4071.0);
+    }
+
+    #[test]
+    fn invertibility() {
+        let xss = [
+            [6.0, 4.0, 4.0, 4.0],
+            [5.0, 5.0, 7.0, 6.0],
+            [4.0, -9.0, 3.0, -7.0],
+            [9.0, 1.0, 7.0, -6.0],
+        ];
+        let a = Matrix::new(xss);
+        assert_eq!(a.det(), -2120.0);
+        assert!(a.is_invertible());
+
+        let xss = [
+            [-4.0, 2.0, -2.0, -3.0],
+            [9.0, 6.0, 2.0, 6.0],
+            [0.0, -5.0, 1.0, -5.0],
+            [0.0, 0.0, 0.0, 0.0],
+        ];
+        let a = Matrix::new(xss);
+        assert_eq!(a.det(), 0.0);
+        assert!(!a.is_invertible());
+    }
+
+    #[test]
+    fn inverse_of_4x4() {
+        let tests = vec![
+            (
+                [
+                    [-5.0, 2.0, 6.0, -8.0],
+                    [1.0, -5.0, 1.0, 8.0],
+                    [7.0, 7.0, -6.0, -7.0],
+                    [1.0, -3.0, 7.0, 4.0],
+                ],
+                [
+                    [0.21805, 0.45113, 0.24060, -0.04511],
+                    [-0.80827, -1.45677, -0.44361, 0.52068],
+                    [-0.07895, -0.22368, -0.05263, 0.19737],
+                    [-0.52256, -0.81391, -0.30075, 0.30639],
+                ],
+            ),
+            (
+                [
+                    [8.0, -5.0, 9.0, 2.0],
+                    [7.0, 5.0, 6.0, 1.0],
+                    [-6.0, 0.0, 9.0, 6.0],
+                    [-3.0, 0.0, -9.0, -4.0],
+                ],
+                [
+                    [-0.15385, -0.15385, -0.28205, -0.53846],
+                    [-0.07692, 0.12308, 0.02564, 0.03077],
+                    [0.35897, 0.35897, 0.43590, 0.92308],
+                    [-0.69231, -0.69231, -0.76923, -1.92308],
+                ],
+            ),
+            (
+                [
+                    [9.0, 3.0, 0.0, 9.0],
+                    [-5.0, -2.0, -6.0, -3.0],
+                    [-4.0, 9.0, 6.0, 4.0],
+                    [-7.0, 6.0, 6.0, 2.0],
+                ],
+                [
+                    [-0.04074, -0.07778, 0.14444, -0.22222],
+                    [-0.07778, 0.03333, 0.36667, -0.33333],
+                    [-0.02901, -0.14630, -0.10926, 0.12963],
+                    [0.17778, 0.06667, -0.26667, 0.33333],
+                ],
+            ),
+        ];
+
+        for test in tests {
+            let a = Matrix::new(test.0);
+            assert!(a.is_invertible());
+            let b = a.inverse().unwrap();
+            let want = Matrix::new(test.1);
+            for i in 0..4 {
+                for j in 0..4 {
+                    assert_f64_eq!(b.ij(i, j), want.ij(i, j), 0.00001);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn multiply_product_by_inverse() {
+        let xss = [
+            [3.0, -9.0, 7.0, 3.0],
+            [3.0, -8.0, 2.0, -9.0],
+            [-4.0, 4.0, 4.0, 1.0],
+            [-6.0, 5.0, -1.0, 1.0],
+        ];
+        let yss = [
+            [8.0, 2.0, 2.0, 2.0],
+            [3.0, -1.0, 7.0, 0.0],
+            [7.0, 0.0, 5.0, 4.0],
+            [6.0, 2.0, 0.0, 5.0],
+        ];
+        let a = Matrix::new(xss);
+        let b = Matrix::new(yss);
+        let c = a * b;
+        assert_eq!(c * b.inverse().unwrap(), a);
     }
 }

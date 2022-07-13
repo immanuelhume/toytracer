@@ -193,12 +193,7 @@ impl ops::Mul<Vector> for f64 {
 #[cfg(test)]
 mod tests {
     use super::{Point, Tuple, Vector};
-
-    macro_rules! assert_f64_eq {
-        ($a:expr, $b:expr) => {
-            assert!(($a - $b).abs() < std::f64::EPSILON);
-        };
-    }
+    use crate::assert_f64_eq;
 
     #[test]
     fn is_a_point() {
