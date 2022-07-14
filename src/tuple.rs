@@ -5,10 +5,10 @@ pub struct Tuple(pub f64, pub f64, pub f64, pub f64);
 
 impl PartialEq for Tuple {
     fn eq(&self, other: &Self) -> bool {
-        (self.0 - other.0).abs() < std::f64::EPSILON
-            && (self.1 - other.1).abs() < std::f64::EPSILON
-            && (self.2 - other.2).abs() < std::f64::EPSILON
-            && (self.3 - other.3).abs() < std::f64::EPSILON
+        (self.0 - other.0).abs() < crate::EPSILON
+            && (self.1 - other.1).abs() < crate::EPSILON
+            && (self.2 - other.2).abs() < crate::EPSILON
+            && (self.3 - other.3).abs() < crate::EPSILON
     }
 }
 
@@ -99,6 +99,10 @@ impl Point {
     pub fn z(&self) -> f64 {
         self.0 .2
     }
+
+    pub fn inner(&self) -> Tuple {
+        self.0
+    }
 }
 
 impl ops::Sub<Point> for Point {
@@ -153,6 +157,10 @@ impl Vector {
         let Tuple(x, y, z, ..) = self.0;
         let Tuple(a, b, c, ..) = v.0;
         Vector::new(y * c - z * b, z * a - x * c, x * b - y * a)
+    }
+
+    pub fn inner(&self) -> Tuple {
+        self.0
     }
 }
 

@@ -1,15 +1,15 @@
-use crate::tuple::Tuple;
-use crate::F64_EPS;
+use crate::tuple::{Point, Tuple};
+use crate::EPSILON;
 use std::ops;
 
 #[derive(Debug, Clone, Copy)]
-struct Matrix<const M: usize, const N: usize>([[f64; N]; M]);
+pub struct Matrix<const M: usize, const N: usize>([[f64; N]; M]);
 
 impl<const M: usize, const N: usize> PartialEq for Matrix<M, N> {
     fn eq(&self, other: &Self) -> bool {
         for i in 0..M {
             for j in 0..N {
-                if (self.0[i][j] - other.0[i][j]).abs() > F64_EPS {
+                if (self.0[i][j] - other.0[i][j]).abs() > EPSILON {
                     return false;
                 }
             }
@@ -19,17 +19,21 @@ impl<const M: usize, const N: usize> PartialEq for Matrix<M, N> {
 }
 
 #[derive(Debug)]
-enum Error {
+pub enum Error {
     Uninvertible,
 }
 
 impl<const M: usize, const N: usize> Matrix<M, N> {
-    fn new(xss: [[f64; N]; M]) -> Self {
+    pub fn new(xss: [[f64; N]; M]) -> Self {
         Self(xss)
     }
 
-    fn ij(&self, i: usize, j: usize) -> f64 {
+    fn get(&self, i: usize, j: usize) -> f64 {
         self.0[i][j]
+    }
+
+    pub fn set(&mut self, i: usize, j: usize, val: f64) {
+        self.0[i][j] = val
     }
 
     /// Matrix multiplication.
@@ -126,7 +130,7 @@ impl Matrix<4, 4> {
         self.det() != 0.0
     }
 
-    fn inverse(&self) -> Result<Self, Error> {
+    pub fn inverse(&self) -> Result<Self, Error> {
         if !self.is_invertible() {
             return Err(Error::Uninvertible);
         }
@@ -142,7 +146,7 @@ impl Matrix<4, 4> {
 }
 
 impl<const K: usize> Matrix<K, K> {
-    fn ident() -> Self {
+    pub fn ident() -> Self {
         let mut xss = [[0.0; K]; K];
         for i in 0..K {
             for j in 0..K {
@@ -217,20 +221,20 @@ mod tests {
             [13.5, 14.5, 15.5, 16.5],
         ];
         let m = Matrix::new(xss);
-        assert_eq!(m.ij(0, 0), 1.0);
-        assert_eq!(m.ij(0, 3), 4.0);
-        assert_eq!(m.ij(1, 0), 5.5);
-        assert_eq!(m.ij(1, 2), 7.5);
-        assert_eq!(m.ij(2, 2), 11.0);
-        assert_eq!(m.ij(3, 0), 13.5);
-        assert_eq!(m.ij(3, 2), 15.5);
+        assert_eq!(m.get(0, 0), 1.0);
+        assert_eq!(m.get(0, 3), 4.0);
+        assert_eq!(m.get(1, 0), 5.5);
+        assert_eq!(m.get(1, 2), 7.5);
+        assert_eq!(m.get(2, 2), 11.0);
+        assert_eq!(m.get(3, 0), 13.5);
+        assert_eq!(m.get(3, 2), 15.5);
 
         let xss = [[-3.0, 5.0], [1.0, -2.0]];
         let m = Matrix::new(xss);
-        assert_eq!(m.ij(0, 0), -3.0);
-        assert_eq!(m.ij(0, 1), 5.0);
-        assert_eq!(m.ij(1, 0), 1.0);
-        assert_eq!(m.ij(1, 1), -2.0);
+        assert_eq!(m.get(0, 0), -3.0);
+        assert_eq!(m.get(0, 1), 5.0);
+        assert_eq!(m.get(1, 0), 1.0);
+        assert_eq!(m.get(1, 1), -2.0);
     }
 
     #[test]
@@ -486,7 +490,7 @@ mod tests {
             let want = Matrix::new(test.1);
             for i in 0..4 {
                 for j in 0..4 {
-                    assert_f64_eq!(b.ij(i, j), want.ij(i, j), 0.00001);
+                    assert_f64_eq!(b.get(i, j), want.get(i, j), 0.00001);
                 }
             }
         }

@@ -3,9 +3,11 @@
 pub mod canvas;
 pub mod color;
 pub mod matrix;
+pub mod transformation;
 pub mod tuple;
 
-const F64_EPS: f64 = 100.0 * std::f64::EPSILON;
+/// A slightly more lenient epsilon.
+const EPSILON: f64 = 100.0 * std::f64::EPSILON;
 
 macro_rules! assert_f64_eq {
     ($a:expr, $b:expr) => {
