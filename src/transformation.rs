@@ -80,11 +80,58 @@ impl ops::Mul<Vector> for Matrix<4, 4> {
     }
 }
 
+struct Transformation(Matrix<4, 4>);
+
+impl Default for Transformation {
+    fn default() -> Self {
+        Self(Matrix::<4, 4>::ident())
+    }
+}
+
+impl Transformation {
+    fn identity(self) -> Self {
+        self
+    }
+
+    fn translate(self, x: f64, y: f64, z: f64) -> Self {
+        Self(translation(x, y, z) * self.0)
+    }
+
+    fn scale(self, x: f64, y: f64, z: f64) -> Self {
+        Self(scaling(x, y, z) * self.0)
+    }
+
+    fn rotate_x(self, rad: f64) -> Self {
+        Self(rotation_x(rad) * self.0)
+    }
+
+    fn rotate_y(self, rad: f64) -> Self {
+        Self(rotation_y(rad) * self.0)
+    }
+
+    fn rotate_z(self, rad: f64) -> Self {
+        Self(rotation_y(rad) * self.0)
+    }
+
+    fn shear(self, xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Self {
+        Self(shearing(xy, xz, yx, yz, zx, zy) * self.0)
+    }
+}
+
+impl Into<Matrix<4, 4>> for Transformation {
+    fn into(self) -> Matrix<4, 4> {
+        self.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::f64::consts::PI;
 
-    use super::{rotation_x, rotation_y, rotation_z, scaling, shearing, translation};
+    use super::{
+        rotation_x, rotation_y, rotation_z, scaling, shearing, translation, Transformation,
+    };
+    use crate::matrix::Matrix;
     use crate::tuple::{Point, Vector};
 
     #[test]
@@ -275,12 +322,21 @@ mod tests {
     #[test]
     fn chained_transformations() {
         let p = Point::new(1.0, 0.0, 1.0);
+
         let a = rotation_x(PI / 2.0);
         let b = scaling(5.0, 5.0, 5.0);
         let c = translation(10.0, 5.0, 7.0);
 
         let got = (c * b * a) * p;
         let want = Point::new(15.0, 0.0, 7.0);
+        assert_eq!(got, want);
+
+        let transform: Matrix<4, 4> = Transformation::default()
+            .rotate_x(PI / 2.0)
+            .scale(5.0, 5.0, 5.0)
+            .translate(10.0, 5.0, 7.0)
+            .into();
+        let got = transform * p;
         assert_eq!(got, want);
     }
 }
