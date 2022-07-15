@@ -5,7 +5,7 @@ use toytracer::color::Color;
 use toytracer::tuple::{Point, Vector};
 
 fn main() -> Result<(), io::Error> {
-    let filename: String = env::args().nth(2).unwrap();
+    let filename: String = env::args().nth(1).unwrap();
     if path::Path::new(&filename).exists() {
         panic!("file {} already exists", filename);
     }

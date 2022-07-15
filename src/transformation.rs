@@ -2,7 +2,7 @@ use crate::matrix::Matrix;
 use crate::tuple::{Point, Tuple, Vector};
 use std::ops;
 
-fn translation(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
+pub fn translation(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
     let xss = [
         [1.0, 0.0, 0.0, x],
         [0.0, 1.0, 0.0, y],
@@ -12,7 +12,7 @@ fn translation(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
     Matrix::new(xss)
 }
 
-fn scaling(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
+pub fn scaling(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
     let xss = [
         [x, 0.0, 0.0, 0.0],
         [0.0, y, 0.0, 0.0],
@@ -22,7 +22,8 @@ fn scaling(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
     Matrix::new(xss)
 }
 
-fn rotation_x(rad: f64) -> Matrix<4, 4> {
+/// A clockwise rotation about the x axis.
+pub fn rotation_x(rad: f64) -> Matrix<4, 4> {
     let xss = [
         [1.0, 0.0, 0.0, 0.0],
         [0.0, rad.cos(), -rad.sin(), 0.0],
@@ -32,7 +33,8 @@ fn rotation_x(rad: f64) -> Matrix<4, 4> {
     Matrix::new(xss)
 }
 
-fn rotation_y(rad: f64) -> Matrix<4, 4> {
+/// A clockwise rotation about the y axis.
+pub fn rotation_y(rad: f64) -> Matrix<4, 4> {
     let xss = [
         [rad.cos(), 0.0, rad.sin(), 0.0],
         [0.0, 1.0, 0.0, 0.0],
@@ -42,7 +44,8 @@ fn rotation_y(rad: f64) -> Matrix<4, 4> {
     Matrix::new(xss)
 }
 
-fn rotation_z(rad: f64) -> Matrix<4, 4> {
+/// A clockwise rotation about the z axis.
+pub fn rotation_z(rad: f64) -> Matrix<4, 4> {
     let xss = [
         [rad.cos(), -rad.sin(), 0.0, 0.0],
         [rad.sin(), rad.cos(), 0.0, 0.0],
@@ -52,7 +55,7 @@ fn rotation_z(rad: f64) -> Matrix<4, 4> {
     Matrix::new(xss)
 }
 
-fn shearing(xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Matrix<4, 4> {
+pub fn shearing(xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Matrix<4, 4> {
     let xss = [
         [1.0, xy, xz, 0.0],
         [yx, 1.0, yz, 0.0],
@@ -89,31 +92,31 @@ impl Default for Transformation {
 }
 
 impl Transformation {
-    fn identity(self) -> Self {
+    pub fn identity(self) -> Self {
         self
     }
 
-    fn translate(self, x: f64, y: f64, z: f64) -> Self {
+    pub fn translate(self, x: f64, y: f64, z: f64) -> Self {
         Self(translation(x, y, z) * self.0)
     }
 
-    fn scale(self, x: f64, y: f64, z: f64) -> Self {
+    pub fn scale(self, x: f64, y: f64, z: f64) -> Self {
         Self(scaling(x, y, z) * self.0)
     }
 
-    fn rotate_x(self, rad: f64) -> Self {
+    pub fn rotate_x(self, rad: f64) -> Self {
         Self(rotation_x(rad) * self.0)
     }
 
-    fn rotate_y(self, rad: f64) -> Self {
+    pub fn rotate_y(self, rad: f64) -> Self {
         Self(rotation_y(rad) * self.0)
     }
 
-    fn rotate_z(self, rad: f64) -> Self {
+    pub fn rotate_z(self, rad: f64) -> Self {
         Self(rotation_y(rad) * self.0)
     }
 
-    fn shear(self, xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Self {
+    pub fn shear(self, xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Self {
         Self(shearing(xy, xz, yx, yz, zx, zy) * self.0)
     }
 }

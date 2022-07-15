@@ -1,5 +1,6 @@
 use crate::color::Color;
 
+/// A 2D canvas. The (0, 0) coordinate is at the top left.
 pub struct Canvas {
     width: usize,
     height: usize,
