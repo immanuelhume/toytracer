@@ -83,7 +83,7 @@ impl ops::Mul<Vector> for Matrix<4, 4> {
     }
 }
 
-struct Transformation(Matrix<4, 4>);
+pub struct Transformation(Matrix<4, 4>);
 
 impl Default for Transformation {
     fn default() -> Self {

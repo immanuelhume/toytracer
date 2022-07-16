@@ -81,7 +81,7 @@ impl ops::Div<f64> for Tuple {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Point(Tuple);
+pub struct Point(pub Tuple);
 
 impl Point {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
