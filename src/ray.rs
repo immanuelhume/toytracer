@@ -1,6 +1,7 @@
 use crate::get_uid;
+use crate::light::Material;
 use crate::matrix::Matrix;
-use crate::tuple::{Point, Vector};
+use crate::tuple::{Point, Tuple, Vector};
 use std::f64::EPSILON;
 
 pub struct Ray {
@@ -14,7 +15,7 @@ impl Ray {
     }
 
     /// Get the position of this ray at some time t.
-    fn position_at(&self, t: f64) -> Point {
+    pub fn position_at(&self, t: f64) -> Point {
         self.origin + t * self.direction
     }
 
@@ -43,6 +44,10 @@ impl Ray {
             direction: m * self.direction,
         }
     }
+
+    pub fn direction(&self) -> Vector {
+        self.direction
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -50,6 +55,7 @@ pub struct Sphere {
     id: usize,
     center: Point,
     transform: Matrix<4, 4>,
+    material: Material,
 }
 
 impl Default for Sphere {
@@ -58,6 +64,7 @@ impl Default for Sphere {
             id: get_uid(),
             center: Point::new(0.0, 0.0, 0.0),
             transform: Matrix::<4, 4>::ident(),
+            material: Material::default(),
         }
     }
 }
@@ -65,6 +72,26 @@ impl Default for Sphere {
 impl Sphere {
     pub fn set_transform(&mut self, m: Matrix<4, 4>) {
         self.transform = m;
+    }
+
+    /// Computes the normal at some point on the sphere.
+    pub fn normal_at(&self, p: Point) -> Vector {
+        let object_point = self.transform.inverse().unwrap() * p;
+        let object_normal = object_point - self.center;
+        let Tuple(x, y, z, _) = object_normal.inner();
+        let m = self
+            .transform
+            .submatrix(3, 3)
+            .inverse()
+            .unwrap()
+            .transpose()
+            * Matrix::new([[x], [y], [z]]);
+        let world_normal = Vector::new(m.get(0, 0), m.get(1, 0), m.get(2, 0));
+        world_normal.normalize()
+    }
+
+    pub fn set_material(&mut self, m: Material) {
+        self.material = m;
     }
 }
 
@@ -78,9 +105,22 @@ impl<'a> Intersection<'a> {
     fn new(t: f64, object: &'a Sphere) -> Self {
         Self { t, object }
     }
+
+    pub fn t(&self) -> f64 {
+        self.t
+    }
+
+    /// Get the material of the object associated with this intersection.
+    pub fn material(&self) -> Material {
+        self.object.material
+    }
+
+    pub fn object(&self) -> &Sphere {
+        self.object
+    }
 }
 
-fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
+pub fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
     let mut res: Option<Intersection> = None;
     for x in xs {
         if x.t < 0.0 {
@@ -98,9 +138,11 @@ fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
 #[cfg(test)]
 mod tests {
     use super::{hit, Intersection, Ray, Sphere};
+    use crate::light::Material;
     use crate::matrix::Matrix;
-    use crate::transformation::{scaling, translation};
+    use crate::transformation::{rotation_z, scaling, translation};
     use crate::tuple::{Point, Vector};
+    use std::f64::consts::FRAC_PI_4;
 
     #[test]
     fn creating_and_querying_ray() {
@@ -308,5 +350,60 @@ mod tests {
 
         let got = r.when_intersect_sphere(&s);
         assert!(got.is_none());
+    }
+
+    #[test]
+    fn normals_on_sphere() {
+        let s = Sphere::default();
+        let tests = vec![
+            (Point::new(1.0, 0.0, 0.0), Vector::new(1.0, 0.0, 0.0)),
+            (Point::new(0.0, 1.0, 0.0), Vector::new(0.0, 1.0, 0.0)),
+            (Point::new(0.0, 0.0, 1.0), Vector::new(0.0, 0.0, 1.0)),
+            (
+                Point::new(
+                    3.0_f64.sqrt() / 3.0,
+                    3.0_f64.sqrt() / 3.0,
+                    3.0_f64.sqrt() / 3.0,
+                ),
+                Vector::new(
+                    3.0_f64.sqrt() / 3.0,
+                    3.0_f64.sqrt() / 3.0,
+                    3.0_f64.sqrt() / 3.0,
+                ),
+            ),
+        ];
+
+        for test in tests {
+            let (p, want) = test;
+            let got = s.normal_at(p);
+            assert_eq!(got, want);
+        }
+    }
+
+    #[test]
+    fn normal_on_translated_sphere() {
+        let mut s = Sphere::default();
+        s.set_transform(translation(0.0, 1.0, 0.0));
+
+        let got = s.normal_at(Point::new(0.0, 1.70711, -0.70711));
+        let want = Vector::new(0.0, 0.70711, -0.70711);
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn normal_on_transformed_sphere() {
+        let mut s = Sphere::default();
+        let m = scaling(1.0, 0.5, 1.0) * rotation_z(FRAC_PI_4);
+        s.set_transform(m);
+
+        let got = s.normal_at(Point::new(0.0, 2.0_f64.sqrt() / 2.0, -2.0_f64.sqrt() / 2.0));
+        let want = Vector::new(0.0, 0.97014, -0.24253);
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn sphere_has_a_default_material() {
+        let s = Sphere::default();
+        assert_eq!(s.material, Material::default());
     }
 }

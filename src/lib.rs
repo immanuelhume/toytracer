@@ -6,13 +6,14 @@ use std::{
 
 pub mod canvas;
 pub mod color;
+pub mod light;
 pub mod matrix;
 pub mod ray;
 pub mod transformation;
 pub mod tuple;
 
 /// A slightly more lenient epsilon.
-const EPSILON: f64 = 100.0 * std::f64::EPSILON;
+const EPSILON: f64 = 0.00001;
 
 macro_rules! assert_f64_eq {
     ($a:expr, $b:expr) => {

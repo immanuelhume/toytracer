@@ -28,7 +28,7 @@ impl<const M: usize, const N: usize> Matrix<M, N> {
         Self(xss)
     }
 
-    fn get(&self, i: usize, j: usize) -> f64 {
+    pub fn get(&self, i: usize, j: usize) -> f64 {
         self.0[i][j]
     }
 
@@ -89,6 +89,20 @@ impl Matrix<3, 3> {
 
     fn is_invertible(&self) -> bool {
         self.det() != 0.0
+    }
+
+    pub fn inverse(&self) -> Result<Self, Error> {
+        if !self.is_invertible() {
+            return Err(Error::Uninvertible);
+        }
+        let mut xss = [[0.0; 3]; 3];
+        let det = self.det();
+        for i in 0..3 {
+            for j in 0..3 {
+                xss[j][i] = self.cofactor(i, j) / det;
+            }
+        }
+        Ok(Self(xss))
     }
 }
 
@@ -156,7 +170,7 @@ impl<const K: usize> Matrix<K, K> {
         Matrix(xss)
     }
 
-    fn transpose(&self) -> Self {
+    pub fn transpose(&self) -> Self {
         let mut xss = self.0.clone();
         for i in 0..K {
             for j in i..K {
@@ -166,7 +180,7 @@ impl<const K: usize> Matrix<K, K> {
         Matrix(xss)
     }
 
-    fn submatrix(&self, i: usize, j: usize) -> Matrix<{ K - 1 }, { K - 1 }>
+    pub fn submatrix(&self, i: usize, j: usize) -> Matrix<{ K - 1 }, { K - 1 }>
     where
         [(); K - 1]:,
     {

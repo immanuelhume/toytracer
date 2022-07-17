@@ -103,6 +103,10 @@ impl Point {
     pub fn inner(&self) -> Tuple {
         self.0
     }
+
+    pub fn origin() -> Self {
+        Self(Tuple(0.0, 0.0, 0.0, 1.0))
+    }
 }
 
 impl ops::Sub<Point> for Point {
@@ -162,6 +166,10 @@ impl Vector {
     pub fn inner(&self) -> Tuple {
         self.0
     }
+
+    pub fn reflect(&self, v: Vector) -> Vector {
+        *self - v * 2.0 * self.dot(v)
+    }
 }
 
 impl ops::Sub<Vector> for Vector {
@@ -195,6 +203,15 @@ impl ops::Mul<Vector> for f64 {
     fn mul(self, rhs: Vector) -> Self::Output {
         let Tuple(x, y, z, ..) = rhs.0;
         Vector::new(x * self, y * self, z * self)
+    }
+}
+
+impl ops::Neg for Vector {
+    type Output = Vector;
+
+    fn neg(self) -> Self::Output {
+        let Tuple(x, y, z, ..) = -self.0;
+        Vector::new(x, y, z)
     }
 }
 
@@ -335,5 +352,25 @@ mod tests {
         let b = Vector::new(2.0, 3.0, 4.0);
         assert_eq!(a.cross(b), Vector::new(-1.0, 2.0, -1.0));
         assert_eq!(b.cross(a), Vector::new(1.0, -2.0, 1.0));
+    }
+
+    #[test]
+    fn reflect_vector_45deg() {
+        let v = Vector::new(1.0, -1.0, 0.0);
+        let n = Vector::new(0.0, 1.0, 0.0);
+
+        let got = v.reflect(n);
+        let want = Vector::new(1.0, 1.0, 0.0);
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn reflect_vector_from_slanted_surface() {
+        let v = Vector::new(0.0, -1.0, 0.0);
+        let n = Vector::new(2.0_f64.sqrt() / 2.0, 2.0_f64.sqrt() / 2.0, 0.0);
+
+        let got = v.reflect(n);
+        let want = Vector::new(1.0, 0.0, 0.0);
+        assert_eq!(got, want);
     }
 }

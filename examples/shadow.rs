@@ -1,4 +1,5 @@
-use std::{env, fs::write, path};
+use std::env;
+use std::fs::write;
 use toytracer::{
     canvas::Canvas, color::Color, pad_filepath, ray::Ray, ray::Sphere,
     transformation::Transformation, tuple::Point,
