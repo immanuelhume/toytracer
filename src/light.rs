@@ -1,7 +1,7 @@
 use crate::color::Color;
 use crate::tuple::{Point, Vector};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointLight {
     position: Point,
     intensity: Color,
@@ -41,6 +41,9 @@ impl Material {
     pub fn set_color(mut self, c: Color) -> Self {
         self.color = c;
         self
+    }
+    pub fn color(&self) -> Color {
+        self.color
     }
 
     pub fn set_ambient(mut self, v: f64) -> Self {

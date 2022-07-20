@@ -11,6 +11,7 @@ pub mod matrix;
 pub mod ray;
 pub mod transformation;
 pub mod tuple;
+pub mod world;
 
 /// A slightly more lenient epsilon.
 const EPSILON: f64 = 0.00001;

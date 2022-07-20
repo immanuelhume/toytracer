@@ -2,6 +2,7 @@ use crate::get_uid;
 use crate::light::Material;
 use crate::matrix::Matrix;
 use crate::tuple::{Point, Tuple, Vector};
+use crate::world::World;
 use std::f64::EPSILON;
 
 pub struct Ray {
@@ -36,6 +37,23 @@ impl Ray {
         let t1 = (-b - discr.sqrt()) / (2.0 * a);
         let t2 = (-b + discr.sqrt()) / (2.0 * a);
         Some((Intersection::new(t1, s), Intersection::new(t2, s)))
+    }
+
+    pub fn when_intersect_world<'a>(&self, w: &'a World) -> Vec<Intersection<'a>> {
+        let mut res = Vec::new();
+        for obj in &w.objects {
+            match self.when_intersect_sphere(obj) {
+                None => (),
+                Some((a, b)) => {
+                    res.push(a);
+                    res.push(b);
+                }
+            }
+        }
+
+        // Sort every intersection by it's t value.
+        res.sort_by(|a, b| a.t.total_cmp(&b.t));
+        res
     }
 
     fn transform(&self, m: Matrix<4, 4>) -> Self {
@@ -93,6 +111,10 @@ impl Sphere {
     pub fn set_material(&mut self, m: Material) {
         self.material = m;
     }
+
+    pub fn material(&self) -> Material {
+        self.material
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -102,7 +124,7 @@ pub struct Intersection<'a> {
 }
 
 impl<'a> Intersection<'a> {
-    fn new(t: f64, object: &'a Sphere) -> Self {
+    pub fn new(t: f64, object: &'a Sphere) -> Self {
         Self { t, object }
     }
 
@@ -117,6 +139,21 @@ impl<'a> Intersection<'a> {
 
     pub fn object(&self) -> &Sphere {
         self.object
+    }
+
+    pub fn prepare_computations(&'a self, r: Ray) -> IntersectionVals<'a> {
+        let point = r.position_at(self.t);
+        let eyev = -r.direction;
+        let normalv = self.object.normal_at(point);
+        let inside = eyev.dot(normalv) < 0.0;
+        return IntersectionVals {
+            t: self.t,
+            object: self.object,
+            point,
+            eyev,
+            normalv: if inside { -normalv } else { normalv },
+            inside,
+        };
     }
 }
 
@@ -133,6 +170,15 @@ pub fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
         }
     }
     res
+}
+
+pub struct IntersectionVals<'a> {
+    pub t: f64,
+    pub object: &'a Sphere,
+    pub point: Point,
+    pub eyev: Vector,
+    pub normalv: Vector,
+    pub inside: bool,
 }
 
 #[cfg(test)]
@@ -405,5 +451,39 @@ mod tests {
     fn sphere_has_a_default_material() {
         let s = Sphere::default();
         assert_eq!(s.material, Material::default());
+    }
+
+    #[test]
+    fn precomputing_state_of_an_intersection() {
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
+        let shape = Sphere::default();
+        let i = Intersection::new(4.0, &shape);
+        let comps = i.prepare_computations(r);
+        assert_eq!(comps.t, i.t);
+        assert_eq!(comps.object, i.object);
+        assert_eq!(comps.point, Point::new(0.0, 0.0, -1.0));
+        assert_eq!(comps.eyev, Vector::new(0.0, 0.0, -1.0));
+        assert_eq!(comps.normalv, Vector::new(0.0, 0.0, -1.0));
+    }
+
+    #[test]
+    fn when_intersect_occurs_on_outside() {
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
+        let shape = Sphere::default();
+        let i = Intersection::new(4.0, &shape);
+        let comps = i.prepare_computations(r);
+        assert_eq!(comps.inside, false);
+    }
+
+    #[test]
+    fn when_intersect_occurs_on_inside() {
+        let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
+        let shape = Sphere::default();
+        let i = Intersection::new(1.0, &shape);
+        let comps = i.prepare_computations(r);
+        assert_eq!(comps.point, Point::new(0.0, 0.0, 1.0));
+        assert_eq!(comps.eyev, Vector::new(0.0, 0.0, -1.0));
+        assert_eq!(comps.inside, true);
+        assert_eq!(comps.normalv, Vector::new(0.0, 0.0, -1.0));
     }
 }
