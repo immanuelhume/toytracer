@@ -4,6 +4,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
+pub mod camera;
 pub mod canvas;
 pub mod color;
 pub mod light;

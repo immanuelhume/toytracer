@@ -163,6 +163,16 @@ impl Vector {
         Vector::new(y * c - z * b, z * a - x * c, x * b - y * a)
     }
 
+    pub fn x(&self) -> f64 {
+        self.0 .0
+    }
+    pub fn y(&self) -> f64 {
+        self.0 .1
+    }
+    pub fn z(&self) -> f64 {
+        self.0 .2
+    }
+
     pub fn inner(&self) -> Tuple {
         self.0
     }

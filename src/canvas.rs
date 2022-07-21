@@ -26,7 +26,7 @@ impl Canvas {
         self.pixels[idx] = color;
     }
 
-    fn pixel_at(&self, x: usize, y: usize) -> Color {
+    pub fn pixel_at(&self, x: usize, y: usize) -> Color {
         let idx = y * self.width + x;
         self.pixels[idx]
     }

@@ -28,7 +28,7 @@ impl World {
         )
     }
 
-    fn color_at(&self, r: Ray) -> Color {
+    pub fn color_at(&self, r: Ray) -> Color {
         let intersections = r.when_intersect_world(self);
         if intersections.len() == 0 {
             return Color::black();
@@ -153,12 +153,10 @@ mod tests {
     #[test]
     fn color_when_intersection_behind_ray() {
         let mut w = World::default();
-        {
-            let outer = &mut w.objects[0];
-            outer.set_material(outer.material().set_ambient(1.0));
-            let inner = &mut w.objects[1];
-            inner.set_material(inner.material().set_ambient(1.0));
-        }
+        let outer = &mut w.objects[0];
+        outer.set_material(outer.material().set_ambient(1.0));
+        let inner = &mut w.objects[1];
+        inner.set_material(inner.material().set_ambient(1.0));
         let r = Ray::new(Point::new(0.0, 0.0, 0.75), Vector::new(0.0, 0.0, -1.0));
 
         let got = w.color_at(r);

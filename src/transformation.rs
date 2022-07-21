@@ -127,12 +127,27 @@ impl Into<Matrix<4, 4>> for Transformation {
     }
 }
 
+pub fn view_transform(from: Point, to: Point, up: Vector) -> Matrix<4, 4> {
+    let forward = (to - from).normalize();
+    let left = forward.cross(up.normalize());
+    let true_up = left.cross(forward);
+
+    let orientation = Matrix::<4, 4>::new([
+        [left.x(), left.y(), left.z(), 0.0],
+        [true_up.x(), true_up.y(), true_up.z(), 0.0],
+        [-forward.x(), -forward.y(), -forward.z(), 0.0],
+        [0.0, 0.0, 0.0, 1.0],
+    ]);
+    orientation * translation(-from.x(), -from.y(), -from.z())
+}
+
 #[cfg(test)]
 mod tests {
     use std::f64::consts::PI;
 
     use super::{
-        rotation_x, rotation_y, rotation_z, scaling, shearing, translation, Transformation,
+        rotation_x, rotation_y, rotation_z, scaling, shearing, translation, view_transform,
+        Transformation,
     };
     use crate::matrix::Matrix;
     use crate::tuple::{Point, Vector};
@@ -340,6 +355,52 @@ mod tests {
             .translate(10.0, 5.0, 7.0)
             .into();
         let got = transform * p;
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn transformation_matrix_for_default_orientation() {
+        let from = Point::origin();
+        let to = Point::new(0.0, 0.0, -1.0);
+        let up = Vector::new(0.0, 1.0, 0.0);
+
+        let got = view_transform(from, to, up);
+        assert_eq!(got, Matrix::<4, 4>::ident());
+    }
+
+    #[test]
+    fn view_transformation_looking_in_positive_z_direction() {
+        let from = Point::origin();
+        let to = Point::new(0.0, 0.0, 1.0);
+        let up = Vector::new(0.0, 1.0, 0.0);
+
+        let got = view_transform(from, to, up);
+        assert_eq!(got, scaling(-1.0, 1.0, -1.0));
+    }
+
+    #[test]
+    fn view_transformation_moves_the_world() {
+        let from = Point::new(0.0, 0.0, 8.0);
+        let to = Point::origin();
+        let up = Vector::new(0.0, 1.0, 0.0);
+
+        let got = view_transform(from, to, up);
+        assert_eq!(got, translation(0.0, 0.0, -8.0));
+    }
+
+    #[test]
+    fn arbitrary_view_transformation() {
+        let from = Point::new(1.0, 3.0, 2.0);
+        let to = Point::new(4.0, -2.0, 8.0);
+        let up = Vector::new(1.0, 1.0, 0.0);
+
+        let got = view_transform(from, to, up);
+        let want = Matrix::<4, 4>::new([
+            [-0.50709, 0.50709, 0.67612, -2.36643],
+            [0.76772, 0.60609, 0.12122, -2.82843],
+            [-0.35857, 0.59761, -0.71714, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]);
         assert_eq!(got, want);
     }
 }

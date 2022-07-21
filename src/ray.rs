@@ -63,6 +63,9 @@ impl Ray {
         }
     }
 
+    pub fn origin(&self) -> Point {
+        self.origin
+    }
     pub fn direction(&self) -> Vector {
         self.direction
     }
