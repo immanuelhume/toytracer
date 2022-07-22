@@ -1,9 +1,13 @@
+// Draws the shadow of a sphere.
+
 use std::env;
 use std::fs::write;
-use toytracer::{
-    canvas::Canvas, color::Color, pad_filepath, ray::Ray, ray::Sphere,
-    transformation::Transformation, tuple::Point,
-};
+use toytracer::canvas::Canvas;
+use toytracer::color::Color;
+use toytracer::pad_filepath;
+use toytracer::ray::{Ray, Sphere};
+use toytracer::transformation::Transformation;
+use toytracer::tuple::Point;
 
 /// Number of pixels along one side of the square canvas.
 const CANVAS_PIXELS: usize = 100;
@@ -17,7 +21,7 @@ const HALF_WALL: f64 = WALL_SIZE / 2.0;
 const PIXEL_SIZE: f64 = WALL_SIZE / CANVAS_PIXELS as f64;
 
 fn main() {
-    let filepath = env::args().nth(1).unwrap();
+    let filepath = env::args().nth(1).unwrap_or("./tmp/shadow.ppm".to_string());
     let filepath = pad_filepath(&filepath);
 
     println!("will be writing file to {}", filepath);

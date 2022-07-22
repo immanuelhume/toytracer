@@ -1,3 +1,5 @@
+// Draws a sphere.
+
 use std::env;
 use std::fs::write;
 use toytracer::canvas::Canvas;

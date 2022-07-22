@@ -1,3 +1,5 @@
+// Draws a simple parabolic path.
+
 use std::io::Write;
 use std::{env, fs, io, path};
 use toytracer::canvas::Canvas;
