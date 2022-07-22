@@ -95,6 +95,11 @@ impl Sphere {
         self.transform = m;
     }
 
+    pub fn with_transform(mut self, m: Matrix<4, 4>) -> Self {
+        self.transform = m;
+        self
+    }
+
     /// Computes the normal at some point on the sphere.
     pub fn normal_at(&self, p: Point) -> Vector {
         let object_point = self.transform.inverse().unwrap() * p;
@@ -113,6 +118,11 @@ impl Sphere {
 
     pub fn set_material(&mut self, m: Material) {
         self.material = m;
+    }
+
+    pub fn with_material(mut self, m: Material) -> Self {
+        self.material = m;
+        self
     }
 
     pub fn material(&self) -> Material {

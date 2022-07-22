@@ -4,16 +4,16 @@ use std::env;
 use std::fs::write;
 use toytracer::canvas::Canvas;
 use toytracer::color::Color;
-use toytracer::pad_filepath;
 use toytracer::transformation::{rotation_x, translation};
 use toytracer::tuple::Point;
+use toytracer::{file_exists, pad_filepath};
 
 const N: usize = 256;
 const L: f64 = N as f64 * 3_f64 / 8_f64;
 
 fn main() {
     let filepath = env::args().nth(1).unwrap_or("./tmp/clock.ppm".to_string());
-    let filepath = pad_filepath(&filepath);
+    let filepath = pad_filepath(&filepath, file_exists);
 
     println!("writing output to {}", filepath);
 

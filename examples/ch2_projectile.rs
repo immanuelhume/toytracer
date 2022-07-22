@@ -1,16 +1,18 @@
 // Draws a simple parabolic path.
 
 use std::io::Write;
-use std::{env, fs, io, path};
+use std::{env, fs, io};
 use toytracer::canvas::Canvas;
 use toytracer::color::Color;
 use toytracer::tuple::{Point, Vector};
+use toytracer::{file_exists, pad_filepath};
 
 fn main() -> Result<(), io::Error> {
-    let filename: String = env::args().nth(1).unwrap();
-    if path::Path::new(&filename).exists() {
-        panic!("file {} already exists", filename);
-    }
+    let filename = env::args()
+        .nth(1)
+        .unwrap_or("./tmp/projectile.ppm".to_string());
+    let filename = pad_filepath(&filename, file_exists);
+
     let mut p = Projectile {
         position: Point::new(0.0, 1.0, 0.0),
         velocity: Vector::new(1.0, 1.8, 0.0).normalize() * 11.25,

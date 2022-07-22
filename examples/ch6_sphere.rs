@@ -5,10 +5,10 @@ use std::fs::write;
 use toytracer::canvas::Canvas;
 use toytracer::color::Color;
 use toytracer::light::{lighting, Material, PointLight};
-use toytracer::pad_filepath;
 use toytracer::ray::{hit, Ray, Sphere};
 use toytracer::transformation::Transformation;
 use toytracer::tuple::Point;
+use toytracer::{file_exists, pad_filepath};
 
 /// Number of pixels along one side of the square canvas. This only affects the "resolution" of the
 /// image.
@@ -24,7 +24,7 @@ const PIXEL_SIZE: f64 = WALL_SIZE / CANVAS_PIXELS as f64;
 
 fn main() {
     let filepath = env::args().nth(1).unwrap_or("./tmp/sphere.ppm".to_string());
-    let filepath = pad_filepath(&filepath);
+    let filepath = pad_filepath(&filepath, file_exists);
 
     println!("will be writing file to {}", filepath);
 
@@ -36,8 +36,8 @@ fn main() {
     s.set_transform(Transformation::default().scale(1.0, 1.0, 1.0).into());
     s.set_material(
         Material::default()
-            .set_color(Color::new(1.0, 0.2, 1.0))
-            .set_shininess(100.0),
+            .with_color(Color::new(1.0, 0.2, 1.0))
+            .with_shininess(100.0),
     );
 
     // Create a light source.

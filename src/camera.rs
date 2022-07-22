@@ -4,7 +4,7 @@ use crate::ray::Ray;
 use crate::tuple::Point;
 use crate::world::World;
 
-struct Camera {
+pub struct Camera {
     hsize: usize,
     vsize: usize,
     field_of_view: f64,
@@ -17,7 +17,7 @@ struct Camera {
 }
 
 impl Camera {
-    fn new(hsize: usize, vsize: usize, field_of_view: f64) -> Self {
+    pub fn new(hsize: usize, vsize: usize, field_of_view: f64) -> Self {
         let half_view = (field_of_view / 2.0).tan();
         let aspect = hsize as f64 / vsize as f64;
         let (half_width, half_height);
@@ -55,11 +55,16 @@ impl Camera {
         Ray::new(origin, direction)
     }
 
+    pub fn with_transform(mut self, transform: Matrix<4, 4>) -> Self {
+        self.transform = transform;
+        self
+    }
+
     fn set_transform(&mut self, transform: Matrix<4, 4>) {
         self.transform = transform;
     }
 
-    fn render(&self, world: World) -> Canvas {
+    pub fn render(&self, world: World) -> Canvas {
         let mut image = Canvas::new(self.hsize as usize, self.vsize as usize);
         for y in 0..self.vsize {
             for x in 0..self.hsize {

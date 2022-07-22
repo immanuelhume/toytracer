@@ -10,11 +10,22 @@ pub struct World {
 }
 
 impl World {
-    fn new() -> Self {
+    /// Creates an empty world, with no light and no objects.
+    pub fn new() -> Self {
         Self {
             light: None,
             objects: Vec::new(),
         }
+    }
+
+    pub fn with_light(mut self, light: PointLight) -> Self {
+        self.light = Some(light);
+        self
+    }
+
+    pub fn with_objects(mut self, mut objects: Vec<Sphere>) -> Self {
+        self.objects.append(&mut objects);
+        self
     }
 
     fn shade_hit(&self, c: IntersectionVals) -> Color {
@@ -46,9 +57,9 @@ impl Default for World {
         let mut s1 = Sphere::default();
         s1.set_material(
             Material::default()
-                .set_color(Color::new(0.8, 1.0, 0.6))
-                .set_diffuse(0.7)
-                .set_specular(0.2),
+                .with_color(Color::new(0.8, 1.0, 0.6))
+                .with_diffuse(0.7)
+                .with_specular(0.2),
         );
         let mut s2 = Sphere::default();
         s2.set_transform(scaling(0.5, 0.5, 0.5));
@@ -154,9 +165,9 @@ mod tests {
     fn color_when_intersection_behind_ray() {
         let mut w = World::default();
         let outer = &mut w.objects[0];
-        outer.set_material(outer.material().set_ambient(1.0));
+        outer.set_material(outer.material().with_ambient(1.0));
         let inner = &mut w.objects[1];
-        inner.set_material(inner.material().set_ambient(1.0));
+        inner.set_material(inner.material().with_ambient(1.0));
         let r = Ray::new(Point::new(0.0, 0.0, 0.75), Vector::new(0.0, 0.0, -1.0));
 
         let got = w.color_at(r);

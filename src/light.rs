@@ -38,30 +38,31 @@ impl Default for Material {
 }
 
 impl Material {
-    pub fn set_color(mut self, c: Color) -> Self {
-        self.color = c;
-        self
-    }
     pub fn color(&self) -> Color {
         self.color
     }
 
-    pub fn set_ambient(mut self, v: f64) -> Self {
+    pub fn with_color(mut self, c: Color) -> Self {
+        self.color = c;
+        self
+    }
+
+    pub fn with_ambient(mut self, v: f64) -> Self {
         self.ambient = v;
         self
     }
 
-    pub fn set_diffuse(mut self, v: f64) -> Self {
+    pub fn with_diffuse(mut self, v: f64) -> Self {
         self.diffuse = v;
         self
     }
 
-    pub fn set_specular(mut self, v: f64) -> Self {
+    pub fn with_specular(mut self, v: f64) -> Self {
         self.specular = v;
         self
     }
 
-    pub fn set_shininess(mut self, v: f64) -> Self {
+    pub fn with_shininess(mut self, v: f64) -> Self {
         self.shininess = v;
         self
     }
