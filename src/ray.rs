@@ -1,6 +1,7 @@
 use crate::get_uid;
 use crate::light::Material;
 use crate::matrix::Matrix;
+use crate::transform::Tr;
 use crate::tuple::{Point, Tuple, Vector};
 use crate::world::World;
 use std::f64::EPSILON;
@@ -24,7 +25,7 @@ impl Ray {
         &self,
         s: &'a Sphere,
     ) -> Option<(Intersection<'a>, Intersection<'a>)> {
-        let ray = self.transform(s.transform.inverse().expect("could not transform ray"));
+        let ray = self.transform(s.transform.inverse());
         let sphere_to_ray = ray.origin - s.center;
         let a = ray.direction.dot(ray.direction);
         let b = 2.0 * ray.direction.dot(sphere_to_ray);
@@ -56,7 +57,8 @@ impl Ray {
         res
     }
 
-    fn transform(&self, m: Matrix<4, 4>) -> Self {
+    fn transform(&self, t: Tr) -> Self {
+        let m = t.matrix();
         Self {
             origin: m * self.origin,
             direction: m * self.direction,
@@ -75,7 +77,7 @@ impl Ray {
 pub struct Sphere {
     id: usize,
     center: Point,
-    transform: Matrix<4, 4>,
+    transform: Tr,
     material: Material,
 }
 
@@ -84,34 +86,25 @@ impl Default for Sphere {
         Self {
             id: get_uid(),
             center: Point::new(0.0, 0.0, 0.0),
-            transform: Matrix::<4, 4>::ident(),
+            transform: Tr::default(),
             material: Material::default(),
         }
     }
 }
 
 impl Sphere {
-    pub fn set_transform(&mut self, m: Matrix<4, 4>) {
-        self.transform = m;
-    }
-
-    pub fn with_transform(mut self, m: Matrix<4, 4>) -> Self {
-        self.transform = m;
+    pub fn with_transform(mut self, t: Tr) -> Self {
+        self.transform = t;
         self
     }
 
     /// Computes the normal at some point on the sphere.
     pub fn normal_at(&self, p: Point) -> Vector {
-        let object_point = self.transform.inverse().unwrap() * p;
+        let m: Matrix<4, 4> = self.transform.matrix();
+        let object_point: Point = m.inverse().unwrap() * p;
         let object_normal = object_point - self.center;
         let Tuple(x, y, z, _) = object_normal.inner();
-        let m = self
-            .transform
-            .submatrix(3, 3)
-            .inverse()
-            .unwrap()
-            .transpose()
-            * Matrix::new([[x], [y], [z]]);
+        let m = m.submatrix(3, 3).inverse().unwrap().transpose() * Matrix::new([[x], [y], [z]]);
         let world_normal = Vector::new(m.get(0, 0), m.get(1, 0), m.get(2, 0));
         world_normal.normalize()
     }
@@ -198,8 +191,7 @@ pub struct IntersectionVals<'a> {
 mod tests {
     use super::{hit, Intersection, Ray, Sphere};
     use crate::light::Material;
-    use crate::matrix::Matrix;
-    use crate::transformation::{rotation_z, scaling, translation};
+    use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
     use std::f64::consts::FRAC_PI_4;
 
@@ -357,9 +349,9 @@ mod tests {
     #[test]
     fn translate_a_ray() {
         let r = Ray::new(Point::new(1.0, 2.0, 3.0), Vector::new(0.0, 1.0, 0.0));
-        let m = translation(3.0, 4.0, 5.0);
+        let t = Tr::default().translate(3.0, 4.0, 5.0);
 
-        let got = r.transform(m);
+        let got = r.transform(t);
         assert_eq!(got.origin, Point::new(4.0, 6.0, 8.0));
         assert_eq!(got.direction, Vector::new(0.0, 1.0, 0.0));
     }
@@ -367,9 +359,9 @@ mod tests {
     #[test]
     fn scale_a_ray() {
         let r = Ray::new(Point::new(1.0, 2.0, 3.0), Vector::new(0.0, 1.0, 0.0));
-        let m = scaling(2.0, 3.0, 4.0);
+        let t = Tr::default().scale(2.0, 3.0, 4.0);
 
-        let got = r.transform(m);
+        let got = r.transform(t);
         assert_eq!(got.origin, Point::new(2.0, 6.0, 12.0));
         assert_eq!(got.direction, Vector::new(0.0, 3.0, 0.0));
     }
@@ -377,23 +369,20 @@ mod tests {
     #[test]
     fn sphere_default_transform() {
         let s = Sphere::default();
-        assert_eq!(s.transform, Matrix::<4, 4>::ident());
+        assert_eq!(s.transform, Tr::default());
     }
 
     #[test]
     fn changing_sphere_transformation() {
-        let mut s = Sphere::default();
-        let t = translation(2.0, 3.0, 4.0);
-        s.set_transform(t);
+        let t = Tr::default().translate(2.0, 3.0, 4.0);
+        let s = Sphere::default().with_transform(t);
         assert_eq!(s.transform, t);
     }
 
     #[test]
     fn intersecting_scaled_sphere_with_ray() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let mut s = Sphere::default();
-        let t = scaling(2.0, 2.0, 2.0);
-        s.set_transform(t);
+        let s = Sphere::default().with_transform(Tr::default().scale(2.0, 2.0, 2.0));
 
         let (a, b) = r.when_intersect_sphere(&s).unwrap();
         assert_eq!(a.t, 3.0);
@@ -403,9 +392,7 @@ mod tests {
     #[test]
     fn intersecting_translated_sphere_with_ray() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let mut s = Sphere::default();
-        let t = translation(5.0, 0.0, 0.0);
-        s.set_transform(t);
+        let s = Sphere::default().with_transform(Tr::default().translate(5.0, 0.0, 0.0));
 
         let got = r.when_intersect_sphere(&s);
         assert!(got.is_none());
@@ -441,8 +428,7 @@ mod tests {
 
     #[test]
     fn normal_on_translated_sphere() {
-        let mut s = Sphere::default();
-        s.set_transform(translation(0.0, 1.0, 0.0));
+        let s = Sphere::default().with_transform(Tr::default().translate(0.0, 1.0, 0.0));
 
         let got = s.normal_at(Point::new(0.0, 1.70711, -0.70711));
         let want = Vector::new(0.0, 0.70711, -0.70711);
@@ -451,9 +437,8 @@ mod tests {
 
     #[test]
     fn normal_on_transformed_sphere() {
-        let mut s = Sphere::default();
-        let m = scaling(1.0, 0.5, 1.0) * rotation_z(FRAC_PI_4);
-        s.set_transform(m);
+        let s = Sphere::default()
+            .with_transform(Tr::default().rotate_z(FRAC_PI_4).scale(1.0, 0.5, 1.0));
 
         let got = s.normal_at(Point::new(0.0, 2.0_f64.sqrt() / 2.0, -2.0_f64.sqrt() / 2.0));
         let want = Vector::new(0.0, 0.97014, -0.24253);

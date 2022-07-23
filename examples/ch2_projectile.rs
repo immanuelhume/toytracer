@@ -23,7 +23,7 @@ fn main() -> Result<(), io::Error> {
     };
     let mut canvas = Canvas::new(900, 550);
     while p.position.y() > 0.0 {
-        canvas.draw(
+        canvas.write_to(
             p.position.x() as usize,
             canvas.height() - p.position.y() as usize,
             Color::new(1.0, 0.0, 0.0),

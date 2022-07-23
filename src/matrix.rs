@@ -1,4 +1,4 @@
-use crate::tuple::{Point, Tuple};
+use crate::tuple::Tuple;
 use crate::EPSILON;
 use std::ops;
 

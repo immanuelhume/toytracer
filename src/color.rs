@@ -9,15 +9,15 @@ impl Color {
         Self(Tuple(r, g, b, 0.0))
     }
 
-    pub fn red(&self) -> f64 {
+    pub fn r(&self) -> f64 {
         self.0 .0
     }
 
-    pub fn green(&self) -> f64 {
+    pub fn g(&self) -> f64 {
         self.0 .1
     }
 
-    pub fn blue(&self) -> f64 {
+    pub fn b(&self) -> f64 {
         self.0 .2
     }
 
@@ -81,9 +81,9 @@ impl std::fmt::Display for Color {
         write!(
             f,
             "{} {} {}",
-            (self.red() * 255.0).clamp(0.0, 255.0).ceil(),
-            (self.green() * 255.0).clamp(0.0, 255.0).ceil(),
-            (self.blue() * 255.0).clamp(0.0, 255.0).ceil(),
+            (self.r() * 255.0).clamp(0.0, 255.0).ceil(),
+            (self.g() * 255.0).clamp(0.0, 255.0).ceil(),
+            (self.b() * 255.0).clamp(0.0, 255.0).ceil(),
         )
     }
 }
@@ -95,9 +95,9 @@ mod tests {
     #[test]
     fn basic() {
         let c = Color::new(-0.5, 0.4, 1.7);
-        assert_eq!(c.red(), -0.5);
-        assert_eq!(c.green(), 0.4);
-        assert_eq!(c.blue(), 1.7);
+        assert_eq!(c.r(), -0.5);
+        assert_eq!(c.g(), 0.4);
+        assert_eq!(c.b(), 1.7);
     }
 
     #[test]

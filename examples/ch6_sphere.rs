@@ -6,7 +6,7 @@ use toytracer::canvas::Canvas;
 use toytracer::color::Color;
 use toytracer::light::{lighting, Material, PointLight};
 use toytracer::ray::{hit, Ray, Sphere};
-use toytracer::transformation::Transformation;
+use toytracer::transform::Tr;
 use toytracer::tuple::Point;
 use toytracer::{file_exists, pad_filepath};
 
@@ -32,13 +32,13 @@ fn main() {
     let ray_origin = Point::new(0.0, 0.0, -5.0); // where the eyeball is
 
     // Create a sphere at the origin with a radius of 1.0. Also give it some material.
-    let mut s = Sphere::default();
-    s.set_transform(Transformation::default().scale(1.0, 1.0, 1.0).into());
-    s.set_material(
-        Material::default()
-            .with_color(Color::new(1.0, 0.2, 1.0))
-            .with_shininess(100.0),
-    );
+    let s = Sphere::default()
+        .with_transform(Tr::default().scale(1.0, 1.0, 1.0).into())
+        .with_material(
+            Material::default()
+                .with_color(Color::new(1.0, 0.2, 1.0))
+                .with_shininess(100.0),
+        );
 
     // Create a light source.
     let light_position = Point::new(-10.0, 10.0, -10.0);
@@ -64,7 +64,7 @@ fn main() {
                         let normalv = h.object().normal_at(p);
 
                         let color = lighting(h.material(), light, p, eyev, normalv);
-                        canvas.draw(j, i, color);
+                        canvas.write_to(j, i, color);
                     }
                     _ => (),
                 },

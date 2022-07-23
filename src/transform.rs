@@ -2,7 +2,7 @@ use crate::matrix::Matrix;
 use crate::tuple::{Point, Tuple, Vector};
 use std::ops;
 
-pub fn translation(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
+fn translation(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
     let xss = [
         [1.0, 0.0, 0.0, x],
         [0.0, 1.0, 0.0, y],
@@ -12,7 +12,7 @@ pub fn translation(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
     Matrix::new(xss)
 }
 
-pub fn scaling(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
+fn scaling(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
     let xss = [
         [x, 0.0, 0.0, 0.0],
         [0.0, y, 0.0, 0.0],
@@ -23,7 +23,7 @@ pub fn scaling(x: f64, y: f64, z: f64) -> Matrix<4, 4> {
 }
 
 /// A clockwise rotation about the x axis.
-pub fn rotation_x(rad: f64) -> Matrix<4, 4> {
+fn rotation_x(rad: f64) -> Matrix<4, 4> {
     let xss = [
         [1.0, 0.0, 0.0, 0.0],
         [0.0, rad.cos(), -rad.sin(), 0.0],
@@ -34,7 +34,7 @@ pub fn rotation_x(rad: f64) -> Matrix<4, 4> {
 }
 
 /// A clockwise rotation about the y axis.
-pub fn rotation_y(rad: f64) -> Matrix<4, 4> {
+fn rotation_y(rad: f64) -> Matrix<4, 4> {
     let xss = [
         [rad.cos(), 0.0, rad.sin(), 0.0],
         [0.0, 1.0, 0.0, 0.0],
@@ -45,7 +45,7 @@ pub fn rotation_y(rad: f64) -> Matrix<4, 4> {
 }
 
 /// A clockwise rotation about the z axis.
-pub fn rotation_z(rad: f64) -> Matrix<4, 4> {
+fn rotation_z(rad: f64) -> Matrix<4, 4> {
     let xss = [
         [rad.cos(), -rad.sin(), 0.0, 0.0],
         [rad.sin(), rad.cos(), 0.0, 0.0],
@@ -55,7 +55,7 @@ pub fn rotation_z(rad: f64) -> Matrix<4, 4> {
     Matrix::new(xss)
 }
 
-pub fn shearing(xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Matrix<4, 4> {
+fn shearing(xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Matrix<4, 4> {
     let xss = [
         [1.0, xy, xz, 0.0],
         [yx, 1.0, yz, 0.0],
@@ -83,15 +83,17 @@ impl ops::Mul<Vector> for Matrix<4, 4> {
     }
 }
 
-pub struct Transformation(Matrix<4, 4>);
+/// A transformation.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Tr(Matrix<4, 4>);
 
-impl Default for Transformation {
+impl Default for Tr {
     fn default() -> Self {
         Self(Matrix::<4, 4>::ident())
     }
 }
 
-impl Transformation {
+impl Tr {
     pub fn identity(self) -> Self {
         self
     }
@@ -113,21 +115,23 @@ impl Transformation {
     }
 
     pub fn rotate_z(self, rad: f64) -> Self {
-        Self(rotation_y(rad) * self.0)
+        Self(rotation_z(rad) * self.0)
     }
 
     pub fn shear(self, xy: f64, xz: f64, yx: f64, yz: f64, zx: f64, zy: f64) -> Self {
         Self(shearing(xy, xz, yx, yz, zx, zy) * self.0)
     }
-}
 
-impl Into<Matrix<4, 4>> for Transformation {
-    fn into(self) -> Matrix<4, 4> {
+    pub fn inverse(&self) -> Tr {
+        Tr(self.0.inverse().unwrap())
+    }
+
+    pub fn matrix(&self) -> Matrix<4, 4> {
         self.0
     }
 }
 
-pub fn view_transform(from: Point, to: Point, up: Vector) -> Matrix<4, 4> {
+pub fn view_transform(from: Point, to: Point, up: Vector) -> Tr {
     let forward = (to - from).normalize();
     let left = forward.cross(up.normalize());
     let true_up = left.cross(forward);
@@ -138,7 +142,7 @@ pub fn view_transform(from: Point, to: Point, up: Vector) -> Matrix<4, 4> {
         [-forward.x(), -forward.y(), -forward.z(), 0.0],
         [0.0, 0.0, 0.0, 1.0],
     ]);
-    orientation * translation(-from.x(), -from.y(), -from.z())
+    Tr(orientation * translation(-from.x(), -from.y(), -from.z()))
 }
 
 #[cfg(test)]
@@ -146,8 +150,7 @@ mod tests {
     use std::f64::consts::PI;
 
     use super::{
-        rotation_x, rotation_y, rotation_z, scaling, shearing, translation, view_transform,
-        Transformation,
+        rotation_x, rotation_y, rotation_z, scaling, shearing, translation, view_transform, Tr,
     };
     use crate::matrix::Matrix;
     use crate::tuple::{Point, Vector};
@@ -349,11 +352,11 @@ mod tests {
         let want = Point::new(15.0, 0.0, 7.0);
         assert_eq!(got, want);
 
-        let transform: Matrix<4, 4> = Transformation::default()
+        let transform: Matrix<4, 4> = Tr::default()
             .rotate_x(PI / 2.0)
             .scale(5.0, 5.0, 5.0)
             .translate(10.0, 5.0, 7.0)
-            .into();
+            .matrix();
         let got = transform * p;
         assert_eq!(got, want);
     }
@@ -365,7 +368,7 @@ mod tests {
         let up = Vector::new(0.0, 1.0, 0.0);
 
         let got = view_transform(from, to, up);
-        assert_eq!(got, Matrix::<4, 4>::ident());
+        assert_eq!(got, Tr::default());
     }
 
     #[test]
@@ -375,7 +378,7 @@ mod tests {
         let up = Vector::new(0.0, 1.0, 0.0);
 
         let got = view_transform(from, to, up);
-        assert_eq!(got, scaling(-1.0, 1.0, -1.0));
+        assert_eq!(got, Tr::default().scale(-1.0, 1.0, -1.0));
     }
 
     #[test]
@@ -385,7 +388,7 @@ mod tests {
         let up = Vector::new(0.0, 1.0, 0.0);
 
         let got = view_transform(from, to, up);
-        assert_eq!(got, translation(0.0, 0.0, -8.0));
+        assert_eq!(got, Tr::default().translate(0.0, 0.0, -8.0));
     }
 
     #[test]
@@ -401,6 +404,6 @@ mod tests {
             [-0.35857, 0.59761, -0.71714, 0.0],
             [0.0, 0.0, 0.0, 1.0],
         ]);
-        assert_eq!(got, want);
+        assert_eq!(got.0, want);
     }
 }

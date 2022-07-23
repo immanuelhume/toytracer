@@ -1,14 +1,17 @@
+// Draws a scene with three balls.
+
 use std::env;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_3, FRAC_PI_4};
 use std::fs::write;
 use toytracer::camera::Camera;
 use toytracer::color::Color;
+use toytracer::light::Material;
 use toytracer::light::PointLight;
-use toytracer::transformation::{rotation_x, rotation_y, translation, view_transform};
+use toytracer::ray::Sphere;
+use toytracer::transform::{view_transform, Tr};
 use toytracer::tuple::{Point, Vector};
 use toytracer::world::World;
 use toytracer::{file_exists, pad_filepath};
-use toytracer::{light::Material, ray::Sphere, transformation::scaling};
 
 const WIDTH: usize = 1024;
 const HEIGHT: usize = 512;
@@ -21,37 +24,39 @@ fn main() {
     println!("output will be written to {}", filepath);
 
     // Make the floor.
-    let mut floor = Sphere::default();
-    floor.set_transform(scaling(10.0, 0.01, 10.0));
-    floor.set_material(
-        Material::default()
-            .with_color(Color::new(1.0, 0.9, 0.9))
-            .with_specular(0.0),
-    );
+    let floor = Sphere::default()
+        .with_transform(Tr::default().scale(10.0, 0.01, 10.0))
+        .with_material(
+            Material::default()
+                .with_color(Color::new(1.0, 0.9, 0.9))
+                .with_specular(0.0),
+        );
 
     // Make the left wall.
-    let mut left_wall = Sphere::default();
-    left_wall.set_transform(
-        translation(0.0, 0.0, 5.0)
-            * rotation_y(-FRAC_PI_4)
-            * rotation_x(FRAC_PI_2)
-            * scaling(10.0, 0.01, 10.0),
-    );
-    left_wall.set_material(floor.material());
+    let left_wall = Sphere::default()
+        .with_transform(
+            Tr::default()
+                .scale(10.0, 0.01, 10.0)
+                .rotate_x(FRAC_PI_2)
+                .rotate_y(-FRAC_PI_4)
+                .translate(0.0, 0.0, 5.0),
+        )
+        .with_material(floor.material());
 
     // Make the right wall.
-    let mut right_wall = Sphere::default();
-    right_wall.set_transform(
-        translation(0.0, 0.0, 5.0)
-            * rotation_y(FRAC_PI_4)
-            * rotation_x(FRAC_PI_2)
-            * scaling(10.0, 0.01, 10.0),
-    );
-    right_wall.set_material(floor.material());
+    let right_wall = Sphere::default()
+        .with_transform(
+            Tr::default()
+                .scale(10.0, 0.01, 10.0)
+                .rotate_x(FRAC_PI_2)
+                .rotate_y(FRAC_PI_4)
+                .translate(0.0, 0.0, 5.0),
+        )
+        .with_material(floor.material());
 
     // A chonky green sphere in the middle.
     let middle = Sphere::default()
-        .with_transform(translation(-0.5, 1.0, 0.5))
+        .with_transform(Tr::default().translate(-0.5, 1.0, 0.5))
         .with_material(
             Material::default()
                 .with_color(Color::new(0.1, 1.0, 0.5))
@@ -60,7 +65,7 @@ fn main() {
         );
 
     let right = Sphere::default()
-        .with_transform(translation(1.5, 0.5, -0.5) * scaling(0.5, 0.5, 0.5))
+        .with_transform(Tr::default().scale(0.5, 0.5, 0.5).translate(1.5, 0.5, -0.5))
         .with_material(
             Material::default()
                 .with_color(Color::new(0.5, 1.0, 0.1))
@@ -69,7 +74,11 @@ fn main() {
         );
 
     let left = Sphere::default()
-        .with_transform(translation(-1.5, 0.33, -0.75) * scaling(0.33, 0.33, 0.33))
+        .with_transform(
+            Tr::default()
+                .scale(0.33, 0.33, 0.33)
+                .translate(-1.5, 0.33, -0.75),
+        )
         .with_material(
             Material::default()
                 .with_color(Color::new(1.0, 0.8, 0.1))

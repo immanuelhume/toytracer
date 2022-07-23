@@ -5,7 +5,7 @@ use std::fs::write;
 use toytracer::canvas::Canvas;
 use toytracer::color::Color;
 use toytracer::ray::{Ray, Sphere};
-use toytracer::transformation::Transformation;
+use toytracer::transform::Tr;
 use toytracer::tuple::Point;
 use toytracer::{file_exists, pad_filepath};
 
@@ -29,12 +29,10 @@ fn main() {
     let mut canvas = Canvas::new(CANVAS_PIXELS, CANVAS_PIXELS);
     let ray_origin = Point::new(0.0, 0.0, -5.0);
     let red = Color::new(1.0, 0.0, 0.0);
-    let mut s = Sphere::default();
-    s.set_transform(
-        Transformation::default()
+    let s = Sphere::default().with_transform(
+        Tr::default()
             .scale(1.0, 0.5, 1.0)
-            .shear(1.0, 0.0, 0.5, 0.0, 0.0, 0.0)
-            .into(),
+            .shear(1.0, 0.0, 0.5, 0.0, 0.0, 0.0),
     );
 
     for i in 0..CANVAS_PIXELS {
@@ -46,7 +44,7 @@ fn main() {
             );
             let ray = Ray::new(ray_origin, ray_end - ray_origin);
             match ray.when_intersect_sphere(&s) {
-                Some(_) => canvas.draw(i, j, red),
+                Some(_) => canvas.write_to(i, j, red),
                 _ => (),
             }
         }

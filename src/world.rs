@@ -1,7 +1,7 @@
 use crate::color::Color;
 use crate::light::{lighting, Material, PointLight};
 use crate::ray::{hit, IntersectionVals, Ray, Sphere};
-use crate::transformation::scaling;
+use crate::transform::Tr;
 use crate::tuple::Point;
 
 pub struct World {
@@ -61,8 +61,7 @@ impl Default for World {
                 .with_diffuse(0.7)
                 .with_specular(0.2),
         );
-        let mut s2 = Sphere::default();
-        s2.set_transform(scaling(0.5, 0.5, 0.5));
+        let s2 = Sphere::default().with_transform(Tr::default().scale(0.5, 0.5, 0.5));
         Self {
             light: Some(light),
             objects: vec![s1, s2],
@@ -74,9 +73,8 @@ impl Default for World {
 mod tests {
     use super::World;
     use crate::color::Color;
-    use crate::light::{Material, PointLight};
-    use crate::ray::{Intersection, Ray, Sphere};
-    use crate::transformation::scaling;
+    use crate::light::PointLight;
+    use crate::ray::{Intersection, Ray};
     use crate::tuple::{Point, Vector};
 
     #[test]

@@ -18,7 +18,7 @@ impl Canvas {
 
     /// Writes the color at some pixel. If the specified coordinate is beyond the initialized size,
     /// it is ignored.
-    pub fn draw(&mut self, x: usize, y: usize, color: Color) {
+    pub fn write_to(&mut self, x: usize, y: usize, color: Color) {
         if x >= self.width || y >= self.height {
             return;
         }
@@ -29,6 +29,11 @@ impl Canvas {
     pub fn pixel_at(&self, x: usize, y: usize) -> Color {
         let idx = y * self.width + x;
         self.pixels[idx]
+    }
+
+    /// Get a mutable reference to the pixels of this canvas.
+    pub fn pixels_mut(&mut self) -> &mut Vec<Color> {
+        &mut self.pixels
     }
 
     /// Exports the current canvas as a PPM format string.
@@ -103,7 +108,7 @@ mod tests {
     fn write_pixel() {
         let mut c = Canvas::new(10, 20);
         let red = Color::new(1.0, 0.0, 0.0);
-        c.draw(2, 3, red);
+        c.write_to(2, 3, red);
         assert_eq!(c.pixel_at(2, 3), red);
     }
 
@@ -118,9 +123,9 @@ mod tests {
         let c1 = Color::new(1.5, 0.0, 0.0);
         let c2 = Color::new(0.0, 0.5, 0.0);
         let c3 = Color::new(-0.5, 0.0, 1.0);
-        c.draw(0, 0, c1);
-        c.draw(2, 1, c2);
-        c.draw(4, 2, c3);
+        c.write_to(0, 0, c1);
+        c.write_to(2, 1, c2);
+        c.write_to(4, 2, c3);
         let want = vec![
             "255 0 0 0 0 0 0 0 0 0 0 0 0 0 0",
             "0 0 0 0 0 0 0 128 0 0 0 0 0 0 0",

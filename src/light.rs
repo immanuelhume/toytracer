@@ -68,6 +68,7 @@ impl Material {
     }
 }
 
+/// Computes the appropriate color at some point.
 pub fn lighting(
     m: Material,
     light: PointLight,

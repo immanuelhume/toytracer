@@ -1,14 +1,15 @@
 use crate::canvas::Canvas;
-use crate::matrix::Matrix;
 use crate::ray::Ray;
+use crate::transform::Tr;
 use crate::tuple::Point;
 use crate::world::World;
+use rayon::prelude::*;
 
 pub struct Camera {
     hsize: usize,
     vsize: usize,
     field_of_view: f64,
-    transform: Matrix<4, 4>,
+    transform: Tr,
 
     half_width: f64,
     half_height: f64,
@@ -33,13 +34,14 @@ impl Camera {
             hsize,
             vsize,
             field_of_view,
-            transform: Matrix::<4, 4>::ident(),
+            transform: Tr::default(),
             half_width,
             half_height,
             pixel_size,
         }
     }
 
+    /// Finds the ray which will go through a pixel on the camera's screen.
     fn ray_for_pixel(&self, x: usize, y: usize) -> Ray {
         let xoffset = (x as f64 + 0.5) * self.pixel_size;
         let yoffset = (y as f64 + 0.5) * self.pixel_size;
@@ -47,7 +49,7 @@ impl Camera {
         let world_x = self.half_width - xoffset;
         let world_y = self.half_height - yoffset;
 
-        let transform = self.transform.inverse().unwrap();
+        let transform = self.transform.inverse().matrix();
         let pixel = transform * Point::new(world_x, world_y, -1.0);
         let origin = transform * Point::origin();
         let direction = (pixel - origin).normalize();
@@ -55,24 +57,24 @@ impl Camera {
         Ray::new(origin, direction)
     }
 
-    pub fn with_transform(mut self, transform: Matrix<4, 4>) -> Self {
+    pub fn with_transform(mut self, transform: Tr) -> Self {
         self.transform = transform;
         self
     }
 
-    fn set_transform(&mut self, transform: Matrix<4, 4>) {
-        self.transform = transform;
-    }
-
+    /// Summer time rendering haha :weebdoge:.
     pub fn render(&self, world: World) -> Canvas {
         let mut image = Canvas::new(self.hsize as usize, self.vsize as usize);
-        for y in 0..self.vsize {
-            for x in 0..self.hsize {
+        image
+            .pixels_mut()
+            .par_iter_mut() // in parallel!
+            .enumerate()
+            .for_each(|(idx, px)| {
+                let x = idx % self.hsize;
+                let y = idx / self.hsize;
                 let ray = self.ray_for_pixel(x, y);
-                let color = world.color_at(ray);
-                image.draw(x, y, color);
-            }
-        }
+                *px = world.color_at(ray);
+            });
         image
     }
 }
@@ -82,8 +84,7 @@ mod tests {
     use super::Camera;
     use crate::assert_f64_eq;
     use crate::color::Color;
-    use crate::matrix::Matrix;
-    use crate::transformation::{rotation_y, translation, view_transform};
+    use crate::transform::{view_transform, Tr};
     use crate::tuple::{Point, Vector};
     use crate::world::World;
     use std::f64::consts::{FRAC_PI_2, FRAC_PI_4};
@@ -98,7 +99,7 @@ mod tests {
         assert_eq!(c.hsize, hsize);
         assert_eq!(c.vsize, vsize);
         assert_eq!(c.field_of_view, field_of_view);
-        assert_eq!(c.transform, Matrix::<4, 4>::ident());
+        assert_eq!(c.transform, Tr::default());
     }
 
     #[test]
@@ -133,8 +134,12 @@ mod tests {
 
     #[test]
     fn construct_ray_through_transformed_camera() {
-        let mut c = Camera::new(201, 101, FRAC_PI_2);
-        c.set_transform(rotation_y(FRAC_PI_4) * translation(0.0, -2.0, 5.0));
+        let c = Camera::new(201, 101, FRAC_PI_2).with_transform(
+            Tr::default()
+                .translate(0.0, -2.0, 5.0)
+                .rotate_y(FRAC_PI_4)
+                .into(),
+        );
         let r = c.ray_for_pixel(100, 50);
 
         assert_eq!(r.origin(), Point::new(0.0, 2.0, -5.0));
@@ -147,12 +152,11 @@ mod tests {
     #[test]
     fn rendering_a_world_with_camera() {
         let w = World::default();
-        let mut c = Camera::new(11, 11, FRAC_PI_2);
         let from = Point::new(0.0, 0.0, -5.0);
         let to = Point::origin();
         let up = Vector::new(0.0, 1.0, 0.0);
-        c.set_transform(view_transform(from, to, up));
 
+        let c = Camera::new(11, 11, FRAC_PI_2).with_transform(view_transform(from, to, up));
         let got = c.render(w);
         assert_eq!(got.pixel_at(5, 5), Color::new(0.38066, 0.47583, 0.2855));
     }
