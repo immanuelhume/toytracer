@@ -7,7 +7,7 @@ use toytracer::camera::Camera;
 use toytracer::color::Color;
 use toytracer::light::Material;
 use toytracer::light::PointLight;
-use toytracer::ray::Sphere;
+use toytracer::sphere::Sphere;
 use toytracer::transform::{view_transform, Tr};
 use toytracer::tuple::{Point, Vector};
 use toytracer::world::World;

@@ -1,8 +1,7 @@
-use crate::get_uid;
 use crate::light::Material;
-use crate::matrix::Matrix;
+use crate::sphere::Sphere;
 use crate::transform::Tr;
-use crate::tuple::{Point, Tuple, Vector};
+use crate::tuple::{Point, Vector};
 use crate::world::World;
 use std::f64::EPSILON;
 
@@ -25,8 +24,8 @@ impl Ray {
         &self,
         s: &'a Sphere,
     ) -> Option<(Intersection<'a>, Intersection<'a>)> {
-        let ray = self.transform(s.transform.inverse());
-        let sphere_to_ray = ray.origin - s.center;
+        let ray = self.transform(s.transform().inverse());
+        let sphere_to_ray = ray.origin - s.center();
         let a = ray.direction.dot(ray.direction);
         let b = 2.0 * ray.direction.dot(sphere_to_ray);
         let c = sphere_to_ray.dot(sphere_to_ray) - 1.0;
@@ -73,56 +72,6 @@ impl Ray {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Sphere {
-    id: usize,
-    center: Point,
-    transform: Tr,
-    material: Material,
-}
-
-impl Default for Sphere {
-    fn default() -> Self {
-        Self {
-            id: get_uid(),
-            center: Point::new(0.0, 0.0, 0.0),
-            transform: Tr::default(),
-            material: Material::default(),
-        }
-    }
-}
-
-impl Sphere {
-    pub fn with_transform(mut self, t: Tr) -> Self {
-        self.transform = t;
-        self
-    }
-
-    /// Computes the normal at some point on the sphere.
-    pub fn normal_at(&self, p: Point) -> Vector {
-        let m: Matrix<4, 4> = self.transform.matrix();
-        let object_point: Point = m.inverse().unwrap() * p;
-        let object_normal = object_point - self.center;
-        let Tuple(x, y, z, _) = object_normal.inner();
-        let m = m.submatrix(3, 3).inverse().unwrap().transpose() * Matrix::new([[x], [y], [z]]);
-        let world_normal = Vector::new(m.get(0, 0), m.get(1, 0), m.get(2, 0));
-        world_normal.normalize()
-    }
-
-    pub fn set_material(&mut self, m: Material) {
-        self.material = m;
-    }
-
-    pub fn with_material(mut self, m: Material) -> Self {
-        self.material = m;
-        self
-    }
-
-    pub fn material(&self) -> Material {
-        self.material
-    }
-}
-
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Intersection<'a> {
     t: f64,
@@ -140,7 +89,7 @@ impl<'a> Intersection<'a> {
 
     /// Get the material of the object associated with this intersection.
     pub fn material(&self) -> Material {
-        self.object.material
+        self.object.material()
     }
 
     pub fn object(&self) -> &Sphere {
@@ -189,8 +138,9 @@ pub struct IntersectionVals<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{hit, Intersection, Ray, Sphere};
+    use super::{hit, Intersection, Ray};
     use crate::light::Material;
+    use crate::sphere::Sphere;
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
     use std::f64::consts::FRAC_PI_4;
@@ -369,14 +319,14 @@ mod tests {
     #[test]
     fn sphere_default_transform() {
         let s = Sphere::default();
-        assert_eq!(s.transform, Tr::default());
+        assert_eq!(s.transform(), Tr::default());
     }
 
     #[test]
     fn changing_sphere_transformation() {
         let t = Tr::default().translate(2.0, 3.0, 4.0);
         let s = Sphere::default().with_transform(t);
-        assert_eq!(s.transform, t);
+        assert_eq!(s.transform(), t);
     }
 
     #[test]
@@ -448,7 +398,7 @@ mod tests {
     #[test]
     fn sphere_has_a_default_material() {
         let s = Sphere::default();
-        assert_eq!(s.material, Material::default());
+        assert_eq!(s.material(), Material::default());
     }
 
     #[test]

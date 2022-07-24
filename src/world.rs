@@ -1,6 +1,7 @@
 use crate::color::Color;
 use crate::light::{lighting, Material, PointLight};
-use crate::ray::{hit, IntersectionVals, Ray, Sphere};
+use crate::ray::{hit, IntersectionVals, Ray};
+use crate::sphere::Sphere;
 use crate::transform::Tr;
 use crate::tuple::Point;
 
