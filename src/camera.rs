@@ -63,7 +63,7 @@ impl Camera {
     }
 
     /// Summer time rendering haha :weebdoge:.
-    pub fn render(&self, world: World) -> Canvas {
+    pub fn render(&self, world: &World) -> Canvas {
         let mut image = Canvas::new(self.hsize as usize, self.vsize as usize);
         image
             .pixels_mut()
@@ -157,7 +157,7 @@ mod tests {
         let up = Vector::new(0.0, 1.0, 0.0);
 
         let c = Camera::new(11, 11, FRAC_PI_2).with_transform(view_transform(from, to, up));
-        let got = c.render(w);
+        let got = c.render(&w);
         assert_eq!(got.pixel_at(5, 5), Color::new(0.38066, 0.47583, 0.2855));
     }
 }
