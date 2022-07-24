@@ -3,7 +3,7 @@ use crate::sphere::Sphere;
 use crate::transform::Tr;
 use crate::tuple::{Point, Vector};
 use crate::world::World;
-use std::f64::EPSILON;
+use crate::EPSILON;
 
 pub struct Ray {
     origin: Point,
@@ -101,17 +101,21 @@ impl<'a> Intersection<'a> {
         let eyev = -r.direction;
         let normalv = self.object.normal_at(point);
         let inside = eyev.dot(normalv) < 0.0;
+        let normalv = if inside { -normalv } else { normalv };
+        let over_point = point + normalv * EPSILON;
         return IntersectionVals {
             t: self.t,
             object: self.object,
             point,
             eyev,
-            normalv: if inside { -normalv } else { normalv },
+            normalv,
             inside,
+            over_point,
         };
     }
 }
 
+/// Given a list of intersections, finds the intersection with the lowest non-negative t value.
 pub fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
     let mut res: Option<Intersection> = None;
     for x in xs {
@@ -127,6 +131,8 @@ pub fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
     res
 }
 
+/// A utility struct with some values related to a point of intersection.
+#[derive(Debug)]
 pub struct IntersectionVals<'a> {
     pub t: f64,
     pub object: &'a Sphere,
@@ -134,6 +140,7 @@ pub struct IntersectionVals<'a> {
     pub eyev: Vector,
     pub normalv: Vector,
     pub inside: bool,
+    pub over_point: Point,
 }
 
 #[cfg(test)]
@@ -143,6 +150,7 @@ mod tests {
     use crate::sphere::Sphere;
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
+    use crate::EPSILON;
     use std::f64::consts::FRAC_PI_4;
 
     #[test]
@@ -433,5 +441,16 @@ mod tests {
         assert_eq!(comps.eyev, Vector::new(0.0, 0.0, -1.0));
         assert_eq!(comps.inside, true);
         assert_eq!(comps.normalv, Vector::new(0.0, 0.0, -1.0));
+    }
+
+    #[test]
+    fn hit_should_offset_point() {
+        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
+        let shape = Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 1.0));
+        let i = Intersection::new(5.0, &shape);
+        let comps = i.prepare_computations(r);
+
+        assert!(comps.over_point.z() < -EPSILON / 2.0);
+        assert!(comps.point.z() > comps.over_point.z());
     }
 }

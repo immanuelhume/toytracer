@@ -14,7 +14,7 @@ pub mod tuple;
 pub mod world;
 
 /// A much more lenient epsilon for convenience.
-const EPSILON: f64 = 0.00001;
+const EPSILON: f64 = 1e-5;
 
 macro_rules! assert_f64_eq {
     ($a:expr, $b:expr) => {

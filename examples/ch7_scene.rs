@@ -90,7 +90,7 @@ fn main() {
     let light = PointLight::new(Point::new(-10.0, 10.0, -10.0), Color::new(1.0, 1.0, 1.0));
     let world = World::new()
         .with_light(light)
-        .with_objects(vec![floor, left_wall, right_wall, middle, right, left]);
+        .add_objects(vec![floor, left_wall, right_wall, middle, right, left]);
 
     // And finally the camera.
     let camera = Camera::new(WIDTH, HEIGHT, FOV).with_transform(view_transform(

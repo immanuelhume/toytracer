@@ -1,12 +1,12 @@
 use crate::color::Color;
-use crate::light::{lighting, Material, PointLight};
+use crate::light::{is_shadowed, lighting, Material, PointLight};
 use crate::ray::{hit, IntersectionVals, Ray};
 use crate::sphere::Sphere;
 use crate::transform::Tr;
 use crate::tuple::Point;
 
 pub struct World {
-    light: Option<PointLight>,
+    pub light: Option<PointLight>,
     pub objects: Vec<Sphere>,
 }
 
@@ -24,12 +24,13 @@ impl World {
         self
     }
 
-    pub fn with_objects(mut self, mut objects: Vec<Sphere>) -> Self {
+    pub fn add_objects(mut self, mut objects: Vec<Sphere>) -> Self {
         self.objects.append(&mut objects);
         self
     }
 
     fn shade_hit(&self, c: IntersectionVals) -> Color {
+        let shadowed = is_shadowed(&self, c.over_point);
         lighting(
             c.object.material(),
             self.light
@@ -37,6 +38,7 @@ impl World {
             c.point,
             c.eyev,
             c.normalv,
+            shadowed,
         )
     }
 
@@ -76,6 +78,8 @@ mod tests {
     use crate::color::Color;
     use crate::light::PointLight;
     use crate::ray::{Intersection, Ray};
+    use crate::sphere::Sphere;
+    use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
 
     #[test]
@@ -171,6 +175,26 @@ mod tests {
 
         let got = w.color_at(r);
         let want = w.objects[1].material().color();
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn shade_hit_with_intersection_in_shadow() {
+        let w = World::default()
+            .with_light(PointLight::new(
+                Point::new(0.0, 0.0, -10.0),
+                Color::new(1.0, 1.0, 1.0),
+            ))
+            .add_objects(vec![
+                Sphere::default(),
+                Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 10.0)),
+            ]);
+        let r = Ray::new(Point::new(0.0, 0.0, 5.0), Vector::new(0.0, 0.0, 1.0));
+        let i = Intersection::new(4.0, &w.objects[1]);
+        let comps = i.prepare_computations(r);
+
+        let got = w.shade_hit(comps);
+        let want = Color::new(0.1, 0.1, 0.1);
         assert_eq!(got, want);
     }
 }
