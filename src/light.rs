@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
 use crate::color::Color;
+use crate::patterns::{Pattern, PatternX};
 use crate::ray::{hit, Ray};
+use crate::shapes::Shape;
 use crate::tuple::{Point, Vector};
 use crate::world::World;
 
@@ -18,13 +22,14 @@ impl PointLight {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Material {
     color: Color,
     ambient: f64,
     diffuse: f64,
     specular: f64,
     shininess: f64,
+    pattern: PatternX,
 }
 
 impl Default for Material {
@@ -35,6 +40,7 @@ impl Default for Material {
             diffuse: 0.9,
             specular: 0.9,
             shininess: 200.0,
+            pattern: Arc::new(None),
         }
     }
 }
@@ -68,24 +74,35 @@ impl Material {
         self.shininess = v;
         self
     }
+
+    pub fn with_pattern(mut self, p: Box<dyn Pattern>) -> Self {
+        self.pattern = Arc::new(Some(p));
+        self
+    }
 }
 
 /// Computes the appropriate color at some point.
 pub fn lighting(
     m: Material,
+    obj: &dyn Shape,
     light: PointLight,
-    point: Point,
+    p: Point,
     eyev: Vector,
     normalv: Vector,
     in_shadow: bool,
 ) -> Color {
-    let effective_color = m.color * light.intensity;
+    // Check if the material has a pattern. If there is a pattern, we'll derive the color from the
+    // pattern instead of the material's default color.
+    let effective_color = match &*m.pattern {
+        None => m.color * light.intensity,
+        Some(pat) => pat.color_at_object(obj, p) * light.intensity,
+    };
     let ambient = effective_color * m.ambient;
     // If the point is in shadow, then only the ambient contributes to its color.
     if in_shadow {
         return ambient;
     }
-    let lightv = (light.position - point).normalize();
+    let lightv = (light.position - p).normalize();
     let light_dot_normal = lightv.dot(normalv);
     let (diffuse, specular) = if light_dot_normal < 0.0 {
         (Color::black(), Color::black())
@@ -128,8 +145,11 @@ pub fn is_shadowed(w: &World, p: Point) -> bool {
 mod tests {
     use super::{is_shadowed, lighting, Material, PointLight};
     use crate::color::Color;
+    use crate::patterns::{Pattern, Stripe};
+    use crate::shapes::Sphere;
     use crate::tuple::{Point, Vector};
     use crate::world::World;
+    use crate::{p, v};
 
     #[test]
     fn point_light_has_position_and_intensity() {
@@ -158,7 +178,7 @@ mod tests {
         $(
             #[test]
             fn $name() {
-                let got = lighting(Material::default(), $light, Point::origin(), $eyev, $normalv, $in_shadow);
+                let got = lighting(Material::default(), &Sphere::default(), $light, Point::origin(), $eyev, $normalv, $in_shadow);
                 assert_eq!(got, $want);
             }
         )*
@@ -240,5 +260,39 @@ mod tests {
     no_shadow_when_object_behind_point:
         Point::new(-2.0, -2.0, -2.0),
         false,
+    }
+
+    #[test]
+    fn lighting_with_a_pattern_applied() {
+        let m = Material::default()
+            .with_pattern(Stripe::new(Color::white(), Color::black()).as_box())
+            .with_ambient(1.0)
+            .with_diffuse(0.0)
+            .with_specular(0.0);
+        let eyev = v!(0.0, 0.0, -1.0);
+        let normalv = v!(0.0, 0.0, -1.0);
+        let light = PointLight::new(p!(0.0, 0.0, -10.0), Color::white());
+
+        let c1 = lighting(
+            m.clone(),
+            &Sphere::default(),
+            light,
+            p!(0.9, 0.0, 0.0),
+            eyev,
+            normalv,
+            false,
+        );
+        assert_eq!(c1, Color::white());
+
+        let c2 = lighting(
+            m,
+            &Sphere::default(),
+            light,
+            p!(1.1, 0.0, 0.0),
+            eyev,
+            normalv,
+            false,
+        );
+        assert_eq!(c2, Color::black());
     }
 }

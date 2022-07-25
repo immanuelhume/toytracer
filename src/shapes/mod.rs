@@ -8,12 +8,12 @@ use crate::matrix::Matrix;
 use crate::ray::{Intersection, Ray};
 use crate::transform::Tr;
 use crate::tuple::{Point, Tuple, Vector};
-use std::fmt;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 /// An object is how we actually represent and use a shape in scenes.
-pub type Object = Arc<dyn Shape + Send + Sync>;
-pub trait Shape {
+pub type Object = Arc<dyn Shape>;
+pub trait Shape: Send + Sync + Debug {
     fn transform(&self) -> Tr;
     fn set_transform(&mut self, t: Tr);
     fn material(&self) -> Material;
@@ -48,48 +48,45 @@ pub trait Shape {
     /// Finds the normal vector at some point, where the point is given in object space.
     fn local_normal_at(&self, p: Point) -> Vector;
 
+    /// Every shape must have a unique ID.
     fn id(&self) -> usize;
 }
 
-impl PartialEq for dyn Shape + Send + Sync {
+impl PartialEq for dyn Shape {
     fn eq(&self, other: &Self) -> bool {
         self.id() == other.id()
-    }
-}
-
-impl fmt::Debug for dyn Shape + Send + Sync {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "(shape; ID={})", self.id())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Shape;
+    use crate::get_uid;
     use crate::light::Material;
     use crate::ray::{Intersection, Ray};
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
-    use std::cell::RefCell;
     use std::f64::consts::PI;
+    use std::sync::Mutex;
 
     /// Just a struct used to test the Shape trait.
+    #[derive(Debug)]
     struct TestShape {
         id: usize,
         transform: Tr,
         material: Material,
         /// The transformed ray when computing an intersection. Just used to test internal
         /// behavior.
-        saved_ray: RefCell<Option<Ray>>,
+        saved_ray: Mutex<Option<Ray>>,
     }
 
     impl TestShape {
         fn new() -> Self {
             Self {
-                id: crate::get_uid(),
+                id: get_uid(),
                 transform: Tr::default(),
                 material: Material::default(),
-                saved_ray: RefCell::new(None),
+                saved_ray: Mutex::new(None),
             }
         }
 
@@ -110,11 +107,11 @@ mod tests {
         }
 
         fn material(&self) -> Material {
-            self.material
+            self.material.clone()
         }
 
         fn local_intersect_with(&self, r: Ray) -> Vec<Intersection> {
-            *self.saved_ray.borrow_mut() = Some(r);
+            *self.saved_ray.lock().unwrap() = Some(r);
             vec![]
         }
 
@@ -158,7 +155,7 @@ mod tests {
     #[test]
     fn assigning_a_material() {
         let m = Material::default().with_ambient(1.0);
-        let s = TestShape::new().with_material(m);
+        let s = TestShape::new().with_material(m.clone());
         let got = s.material();
         assert_eq!(got, m);
     }
@@ -169,7 +166,7 @@ mod tests {
         let s = TestShape::new().with_transform(Tr::default().scale(2.0, 2.0, 2.0));
 
         let _ = s.intersect_with(r);
-        let r = s.saved_ray.borrow().unwrap();
+        let r = s.saved_ray.lock().unwrap().unwrap();
         assert_eq!(r.origin(), Point::new(0.0, 0.0, -2.5));
         assert_eq!(r.direction(), Vector::new(0.0, 0.0, 0.5));
     }
@@ -180,7 +177,7 @@ mod tests {
         let s = TestShape::new().with_transform(Tr::default().translate(5.0, 0.0, 0.0));
 
         let _ = s.intersect_with(r);
-        let r = s.saved_ray.borrow().unwrap();
+        let r = s.saved_ray.lock().unwrap().unwrap();
         assert_eq!(r.origin(), Point::new(-5.0, 0.0, -5.0));
         assert_eq!(r.direction(), Vector::new(0.0, 0.0, 1.0));
     }

@@ -5,7 +5,7 @@ use crate::tuple::{Point, Vector};
 use crate::world::World;
 use crate::EPSILON;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Ray {
     origin: Point,
     direction: Vector,
@@ -96,7 +96,7 @@ impl Intersection {
 
 impl PartialEq for Intersection {
     fn eq(&self, other: &Self) -> bool {
-        self.t == other.t && self.object == other.object.clone()
+        self.t == other.t && *self.object == *other.object
     }
 }
 
@@ -130,7 +130,7 @@ pub struct IntersectionVals {
 #[cfg(test)]
 mod tests {
     use super::{hit, Intersection, Ray};
-    use crate::shapes::{Object, Sphere};
+    use crate::shapes::Sphere;
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
     use crate::EPSILON;
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn create_intersection() {
-        let s: Object = Arc::new(Sphere::default());
+        let s = Sphere::default().as_object();
         let i = Intersection::new(3.5, s.clone());
 
         assert_eq!(i.t, 3.5);
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn intersect_sets_object() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s: Object = Arc::new(Sphere::default());
+        let s = Sphere::default().as_object();
 
         let got = s.intersect_with(r);
         assert_eq!(got.len(), 2);
@@ -187,9 +187,9 @@ mod tests {
 
     #[test]
     fn hit_all_intersections_positive() {
-        let s = Arc::new(Sphere::default());
+        let s = Sphere::default().as_object();
         let i1 = Intersection::new(1.0, s.clone());
-        let i2 = Intersection::new(2.0, s.clone());
+        let i2 = Intersection::new(2.0, s);
         let xs = vec![i1.clone(), i2];
 
         let got = hit(xs).unwrap();
@@ -199,9 +199,9 @@ mod tests {
 
     #[test]
     fn hit_some_negative() {
-        let s = Arc::new(Sphere::default());
+        let s = Sphere::default().as_object();
         let i1 = Intersection::new(-1.0, s.clone());
-        let i2 = Intersection::new(1.0, s.clone());
+        let i2 = Intersection::new(1.0, s);
         let xs = vec![i1, i2.clone()];
 
         let got = hit(xs).unwrap();
@@ -211,9 +211,9 @@ mod tests {
 
     #[test]
     fn hit_all_negative() {
-        let s = Arc::new(Sphere::default());
+        let s = Sphere::default().as_object();
         let i1 = Intersection::new(-2.0, s.clone());
-        let i2 = Intersection::new(-1.0, s.clone());
+        let i2 = Intersection::new(-1.0, s);
         let xs = vec![i1, i2];
 
         let got = hit(xs);
@@ -222,11 +222,11 @@ mod tests {
 
     #[test]
     fn hit_always_lowest_nonneg() {
-        let s = Arc::new(Sphere::default());
+        let s = Sphere::default().as_object();
         let i1 = Intersection::new(5.0, s.clone());
         let i2 = Intersection::new(7.0, s.clone());
         let i3 = Intersection::new(-3.0, s.clone());
-        let i4 = Intersection::new(2.0, s.clone());
+        let i4 = Intersection::new(2.0, s);
         let xs = vec![i1, i2, i3, i4.clone()];
 
         let got = hit(xs).unwrap();

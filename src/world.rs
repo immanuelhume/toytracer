@@ -44,9 +44,10 @@ impl World {
     }
 
     fn shade_hit(&self, c: IntersectionVals) -> Color {
-        let shadowed = is_shadowed(&self, c.over_point);
+        let shadowed = is_shadowed(self, c.over_point);
         lighting(
             c.object.material(),
+            &*c.object,
             self.light
                 .unwrap_or(PointLight::new(Point::origin(), Color::black())),
             c.point,
@@ -94,7 +95,7 @@ mod tests {
     use crate::shapes::Sphere;
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
-    use std::sync::Arc;
+    use crate::{p, v};
 
     #[test]
     fn creating_a_world() {
@@ -181,20 +182,19 @@ mod tests {
     #[test]
     fn color_when_intersection_behind_ray() {
         let w = World::default().with_objects(vec![
-            Arc::new(
-                Sphere::default().with_material(
+            Sphere::default()
+                .with_material(
                     Material::default()
                         .with_color(Color::new(0.8, 1.0, 0.6))
                         .with_ambient(1.0)
                         .with_diffuse(0.7)
                         .with_specular(0.2),
-                ),
-            ),
-            Arc::new(
-                Sphere::default()
-                    .with_transform(Tr::default().scale(0.5, 0.5, 0.5))
-                    .with_material(Material::default().with_ambient(1.0)),
-            ),
+                )
+                .as_object(),
+            Sphere::default()
+                .with_transform(Tr::default().scale(0.5, 0.5, 0.5))
+                .with_material(Material::default().with_ambient(1.0))
+                .as_object(),
         ]);
         let r = Ray::new(Point::new(0.0, 0.0, 0.75), Vector::new(0.0, 0.0, -1.0));
 
@@ -211,10 +211,12 @@ mod tests {
                 Color::new(1.0, 1.0, 1.0),
             ))
             .add_objects(vec![
-                Arc::new(Sphere::default()),
-                Arc::new(Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 10.0))),
+                Sphere::default().as_object(),
+                Sphere::default()
+                    .with_transform(Tr::default().translate(0.0, 0.0, 10.0))
+                    .as_object(),
             ]);
-        let r = Ray::new(Point::new(0.0, 0.0, 5.0), Vector::new(0.0, 0.0, 1.0));
+        let r = Ray::new(p!(0.0, 0.0, 5.0), v!(0.0, 0.0, 1.0));
         let i = Intersection::new(4.0, w.objects[1].clone());
         let comps = i.prepare_computations(r);
 

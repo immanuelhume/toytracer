@@ -7,6 +7,7 @@ pub mod canvas;
 pub mod color;
 pub mod light;
 pub mod matrix;
+pub mod patterns;
 pub mod ray;
 pub mod shapes;
 pub mod transform;

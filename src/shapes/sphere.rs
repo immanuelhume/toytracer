@@ -6,7 +6,7 @@ use crate::tuple::{Point, Vector};
 use crate::{get_uid, EPSILON};
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Sphere {
     id: usize,
     center: Point,
@@ -31,7 +31,7 @@ impl Shape for Sphere {
     }
 
     fn material(&self) -> Material {
-        self.material
+        self.material.clone()
     }
 
     fn local_intersect_with(&self, r: Ray) -> Vec<Intersection> {
@@ -46,8 +46,11 @@ impl Shape for Sphere {
         discr = if discr.abs() < EPSILON { 0.0 } else { discr };
         let t1 = (-b - discr.sqrt()) / (2.0 * a);
         let t2 = (-b + discr.sqrt()) / (2.0 * a);
-        let s = Arc::new(*self);
-        vec![Intersection::new(t1, s.clone()), Intersection::new(t2, s)]
+        let s = self.clone().as_object();
+        vec![
+            Intersection::new(t1, s.clone()),
+            Intersection::new(t2, s.clone()),
+        ]
     }
 
     fn local_normal_at(&self, p: Point) -> Vector {
@@ -83,13 +86,7 @@ impl Sphere {
     }
 
     pub fn as_object(self) -> Object {
-        self.into()
-    }
-}
-
-impl From<Sphere> for Object {
-    fn from(s: Sphere) -> Self {
-        Arc::new(s)
+        Arc::new(self)
     }
 }
 

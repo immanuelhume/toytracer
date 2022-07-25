@@ -7,7 +7,7 @@ use crate::v;
 use crate::{get_uid, EPSILON};
 use std::sync::Arc;
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Plane {
     id: usize,
     transform: Tr,
@@ -34,7 +34,7 @@ impl Shape for Plane {
     }
 
     fn material(&self) -> Material {
-        self.material
+        self.material.clone()
     }
 
     fn set_material(&mut self, m: Material) {
@@ -46,7 +46,7 @@ impl Shape for Plane {
             return vec![];
         }
         let t = -r.origin().y() / r.direction().y();
-        vec![Intersection::new(t, Arc::new(*self))]
+        vec![Intersection::new(t, Arc::new(self.clone()))]
     }
 
     fn local_normal_at(&self, _: Point) -> Vector {
@@ -70,13 +70,7 @@ impl Plane {
     }
 
     pub fn as_object(self) -> Object {
-        self.into()
-    }
-}
-
-impl From<Plane> for Object {
-    fn from(p: Plane) -> Self {
-        Arc::new(p)
+        Arc::new(self)
     }
 }
 

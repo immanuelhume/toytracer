@@ -63,7 +63,15 @@ fn main() {
                     let p = ray.position_at(h.t());
                     let normalv = h.object().normal_at(p);
 
-                    let color = lighting(h.material(), light, p, eyev, normalv, false);
+                    let color = lighting(
+                        h.material(),
+                        &Sphere::default(),
+                        light,
+                        p,
+                        eyev,
+                        normalv,
+                        false,
+                    );
                     canvas.write_to(j, i, color);
                 }
                 _ => (),

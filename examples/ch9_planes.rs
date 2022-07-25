@@ -1,9 +1,10 @@
 use std::env;
-use std::f64::consts::{FRAC_PI_2, FRAC_PI_3};
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_3, FRAC_PI_4};
 use std::fs::write;
 use toytracer::camera::Camera;
 use toytracer::color::Color;
 use toytracer::light::{Material, PointLight};
+use toytracer::patterns::{Pattern, Stripe};
 use toytracer::shapes::{Plane, Sphere};
 use toytracer::transform::{view_transform, Tr};
 use toytracer::tuple::{Point, Vector};
@@ -24,7 +25,7 @@ fn main() {
         .with_material(
             Material::default()
                 .with_specular(0.1)
-                .with_color(Color::new(0.3, 0.3, 0.3)),
+                .with_color(Color::boysenberry()),
         )
         .as_object();
     let ceil = Plane::default()
@@ -37,17 +38,28 @@ fn main() {
         .as_object();
 
     let s1 = Sphere::default()
-        .with_material(Material::default().with_color(Color::new(0.3, 0.4, 0.5)))
+        .with_material(Material::default().with_color(Color::watermelon()))
         .with_transform(Tr::default().translate(5.0, 1.0, 1.0).scale(1.0, 1.0, 1.0))
         .as_object();
 
     let s2 = Sphere::default()
-        .with_material(Material::default().with_color(Color::new(0.5, 0.4, 0.3)))
+        .with_material(
+            Material::default().with_pattern(
+                Stripe::new(Color::watermelon(), Color::dolphin_gray())
+                    .with_transform(
+                        Tr::default()
+                            .scale(0.2, 1.0, 1.0)
+                            .rotate_y(-FRAC_PI_4)
+                            .rotate_z(FRAC_PI_3),
+                    )
+                    .as_box(),
+            ),
+        )
         .with_transform(Tr::default().translate(0.0, 1.0, -2.0).scale(2.0, 2.0, 2.0))
         .as_object();
 
     let s3 = Sphere::default()
-        .with_material(Material::default().with_color(Color::white()))
+        .with_material(Material::default().with_color(Color::crayola_gold()))
         .with_transform(Tr::default().scale(0.2, 0.2, 0.2).translate(10.0, 0.2, 0.0))
         .as_object();
 

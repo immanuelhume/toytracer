@@ -26,14 +26,28 @@ impl Color {
         let Tuple(x, y, z, ..) = c.0;
         Color(Tuple(r * x, g * y, b * z, 0.0))
     }
+}
 
-    pub fn white() -> Self {
-        Self::new(1.0, 1.0, 1.0)
-    }
+/// Generates methods for colors from RGB values.
+macro_rules! add_color {
+    ($($name:ident: $r:expr, $g:expr, $b:expr,)*) => {
+        impl Color {
+        $(
+            pub fn $name() -> Self {
+                Self::new($r as f64/256.0, $g as f64/256.0, $b as f64/256.0)
+            }
+        )*
+        }
+    };
+}
 
-    pub fn black() -> Self {
-        Self::new(0.0, 0.0, 0.0)
-    }
+add_color! {
+    white: 256, 256, 256,
+    black: 0, 0, 0,
+    dolphin_gray: 116, 146, 140,
+    crayola_gold: 227, 256, 236,
+    watermelon: 232, 102, 137,
+    boysenberry: 130, 57, 103,
 }
 
 impl ops::Add<Color> for Color {
