@@ -6,7 +6,7 @@ use toytracer::canvas::Canvas;
 use toytracer::color::Color;
 use toytracer::light::{lighting, Material, PointLight};
 use toytracer::ray::{hit, Ray};
-use toytracer::sphere::Sphere;
+use toytracer::shapes::{Shape, Sphere};
 use toytracer::transform::Tr;
 use toytracer::tuple::Point;
 use toytracer::{file_exists, pad_filepath};
@@ -58,17 +58,14 @@ fn main() {
             let ray = Ray::new(ray_origin, (ray_end - ray_origin).normalize());
             let eyev = -ray.direction();
 
-            match ray.when_intersect_sphere(&s) {
-                Some((a, b)) => match hit(vec![a, b]) {
-                    Some(h) => {
-                        let p = ray.position_at(h.t());
-                        let normalv = h.object().normal_at(p);
+            match hit(s.intersect_with(ray)) {
+                Some(h) => {
+                    let p = ray.position_at(h.t());
+                    let normalv = h.object().normal_at(p);
 
-                        let color = lighting(h.material(), light, p, eyev, normalv, false);
-                        canvas.write_to(j, i, color);
-                    }
-                    _ => (),
-                },
+                    let color = lighting(h.material(), light, p, eyev, normalv, false);
+                    canvas.write_to(j, i, color);
+                }
                 _ => (),
             }
         }

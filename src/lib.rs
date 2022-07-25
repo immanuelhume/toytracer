@@ -8,7 +8,7 @@ pub mod color;
 pub mod light;
 pub mod matrix;
 pub mod ray;
-pub mod sphere;
+pub mod shapes;
 pub mod transform;
 pub mod tuple;
 pub mod world;

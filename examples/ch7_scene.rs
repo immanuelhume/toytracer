@@ -7,7 +7,7 @@ use toytracer::camera::Camera;
 use toytracer::color::Color;
 use toytracer::light::Material;
 use toytracer::light::PointLight;
-use toytracer::sphere::Sphere;
+use toytracer::shapes::Sphere;
 use toytracer::transform::{view_transform, Tr};
 use toytracer::tuple::{Point, Vector};
 use toytracer::world::World;
@@ -29,7 +29,8 @@ fn main() {
             Material::default()
                 .with_specular(0.0)
                 .with_color(Color::new(0.5, 0.5, 0.5)),
-        );
+        )
+        .into_object();
     let wall = Sphere::default()
         .with_transform(
             Tr::default()
@@ -37,15 +38,19 @@ fn main() {
                 .rotate_z(FRAC_PI_2)
                 .translate(-20.0, 0.0, 0.0),
         )
-        .with_material(floor.material());
-    let s1 = Sphere::default().with_transform(
-        Tr::default()
-            .translate(-2.0, 1.0, -0.5)
-            .scale(3.0, 3.0, 3.0),
-    );
+        .with_material(floor.material())
+        .into_object();
+    let s1 = Sphere::default()
+        .with_transform(
+            Tr::default()
+                .translate(-2.0, 1.0, -0.5)
+                .scale(3.0, 3.0, 3.0),
+        )
+        .into_object();
     let s2 = Sphere::default()
         .with_transform(Tr::default().translate(2.0, 1.0, 0.0))
-        .with_material(Material::default().with_color(Color::new(1.0, 0.5, 1.0)));
+        .with_material(Material::default().with_color(Color::new(1.0, 0.5, 1.0)))
+        .into_object();
 
     let world = World::new()
         .with_light(PointLight::new(

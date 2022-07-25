@@ -1,10 +1,11 @@
 use crate::light::Material;
-use crate::sphere::Sphere;
+use crate::shapes::Object;
 use crate::transform::Tr;
 use crate::tuple::{Point, Vector};
 use crate::world::World;
 use crate::EPSILON;
 
+#[derive(Clone, Copy)]
 pub struct Ray {
     origin: Point,
     direction: Vector,
@@ -20,35 +21,12 @@ impl Ray {
         self.origin + t * self.direction
     }
 
-    pub fn when_intersect_sphere<'a>(
-        &self,
-        s: &'a Sphere,
-    ) -> Option<(Intersection<'a>, Intersection<'a>)> {
-        let ray = self.transform(s.transform().inverse());
-        let sphere_to_ray = ray.origin - s.center();
-        let a = ray.direction.dot(ray.direction);
-        let b = 2.0 * ray.direction.dot(sphere_to_ray);
-        let c = sphere_to_ray.dot(sphere_to_ray) - 1.0;
-        let mut discr = b * b - 4.0 * a * c;
-        if discr < -EPSILON {
-            return None;
-        }
-        discr = if discr.abs() < EPSILON { 0.0 } else { discr };
-        let t1 = (-b - discr.sqrt()) / (2.0 * a);
-        let t2 = (-b + discr.sqrt()) / (2.0 * a);
-        Some((Intersection::new(t1, s), Intersection::new(t2, s)))
-    }
-
-    pub fn when_intersect_world<'a>(&self, w: &'a World) -> Vec<Intersection<'a>> {
+    /// Finds all the places where this ray intersects with stuff in a given world. The list of
+    /// intersections returned will be sorted by increasing distance form the ray's origin.
+    pub fn when_intersect_world(&self, w: &World) -> Vec<Intersection> {
         let mut res = Vec::new();
         for obj in &w.objects {
-            match self.when_intersect_sphere(obj) {
-                None => (),
-                Some((a, b)) => {
-                    res.push(a);
-                    res.push(b);
-                }
-            }
+            res.append(&mut obj.intersect_with(*self));
         }
 
         // Sort every intersection by it's t value.
@@ -56,7 +34,7 @@ impl Ray {
         res
     }
 
-    fn transform(&self, t: Tr) -> Self {
+    pub fn with_transform(&self, t: Tr) -> Self {
         let m = t.matrix();
         Self {
             origin: m * self.origin,
@@ -67,19 +45,20 @@ impl Ray {
     pub fn origin(&self) -> Point {
         self.origin
     }
+
     pub fn direction(&self) -> Vector {
         self.direction
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct Intersection<'a> {
+#[derive(Debug, Clone)]
+pub struct Intersection {
     t: f64,
-    object: &'a Sphere,
+    object: Object,
 }
 
-impl<'a> Intersection<'a> {
-    pub fn new(t: f64, object: &'a Sphere) -> Self {
+impl Intersection {
+    pub fn new(t: f64, object: Object) -> Self {
         Self { t, object }
     }
 
@@ -92,11 +71,11 @@ impl<'a> Intersection<'a> {
         self.object.material()
     }
 
-    pub fn object(&self) -> &Sphere {
-        self.object
+    pub fn object(&self) -> Object {
+        self.object.clone()
     }
 
-    pub fn prepare_computations(&'a self, r: Ray) -> IntersectionVals<'a> {
+    pub fn prepare_computations(&self, r: Ray) -> IntersectionVals {
         let point = r.position_at(self.t);
         let eyev = -r.direction;
         let normalv = self.object.normal_at(point);
@@ -105,13 +84,19 @@ impl<'a> Intersection<'a> {
         let over_point = point + normalv * EPSILON;
         return IntersectionVals {
             t: self.t,
-            object: self.object,
+            object: self.object.clone(),
             point,
             eyev,
             normalv,
             inside,
             over_point,
         };
+    }
+}
+
+impl PartialEq for Intersection {
+    fn eq(&self, other: &Self) -> bool {
+        self.t == other.t && self.object == other.object.clone()
     }
 }
 
@@ -132,10 +117,9 @@ pub fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
 }
 
 /// A utility struct with some values related to a point of intersection.
-#[derive(Debug)]
-pub struct IntersectionVals<'a> {
+pub struct IntersectionVals {
     pub t: f64,
-    pub object: &'a Sphere,
+    pub object: Object,
     pub point: Point,
     pub eyev: Vector,
     pub normalv: Vector,
@@ -146,12 +130,11 @@ pub struct IntersectionVals<'a> {
 #[cfg(test)]
 mod tests {
     use super::{hit, Intersection, Ray};
-    use crate::light::Material;
-    use crate::sphere::Sphere;
+    use crate::shapes::{Object, Sphere};
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
     use crate::EPSILON;
-    use std::f64::consts::FRAC_PI_4;
+    use std::sync::Arc;
 
     #[test]
     fn creating_and_querying_ray() {
@@ -174,93 +157,40 @@ mod tests {
     }
 
     #[test]
-    fn ray_intersecting_spheres() {
-        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Sphere::default();
-
-        let (a, b) = r.when_intersect_sphere(&s).unwrap();
-        let got = (a.t, b.t);
-        let want = (4.0, 6.0);
-        assert_eq!(got, want);
-    }
-
-    #[test]
-    fn ray_intersects_sphere_at_tangent() {
-        let r = Ray::new(Point::new(0.0, 1.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Sphere::default();
-
-        let (a, b) = r.when_intersect_sphere(&s).unwrap();
-        let got = (a.t, b.t);
-        let want = (5.0, 5.0);
-        assert_eq!(got, want);
-    }
-
-    #[test]
-    fn ray_misses_sphere() {
-        let r = Ray::new(Point::new(0.0, 2.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Sphere::default();
-
-        let got = r.when_intersect_sphere(&s);
-        let want = None;
-        assert_eq!(got, want);
-    }
-
-    #[test]
-    fn ray_inside_sphere() {
-        let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Sphere::default();
-
-        let (a, b) = r.when_intersect_sphere(&s).unwrap();
-        let got = (a.t, b.t);
-        let want = (-1.0, 1.0);
-        assert_eq!(got, want);
-    }
-
-    #[test]
-    fn sphere_behind_ray() {
-        let r = Ray::new(Point::new(0.0, 0.0, 5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Sphere::default();
-
-        let (a, b) = r.when_intersect_sphere(&s).unwrap();
-        let got = (a.t, b.t);
-        let want = (-6.0, -4.0);
-        assert_eq!(got, want);
-    }
-
-    #[test]
     fn create_intersection() {
-        let s = Sphere::default();
-        let i = Intersection::new(3.5, &s);
+        let s: Object = Arc::new(Sphere::default());
+        let i = Intersection::new(3.5, s.clone());
 
         assert_eq!(i.t, 3.5);
-        assert_eq!(*i.object, s);
+        assert_eq!(*i.object, *s);
     }
 
-    #[test]
-    fn aggregating_intersections() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(1.0, &s);
-        let i2 = Intersection::new(2.0, &s);
+    // #[test]
+    // fn aggregating_intersections() {
+    //     let s = Sphere::default();
+    //     let i1 = Intersection::new(1.0, &s);
+    //     let i2 = Intersection::new(2.0, &s);
 
-        let intersections = vec![i1, i2];
-    }
+    //     let intersections = vec![i1, i2];
+    // }
 
     #[test]
     fn intersect_sets_object() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Sphere::default();
+        let s: Object = Arc::new(Sphere::default());
 
-        let got = r.when_intersect_sphere(&s).unwrap();
-        assert_eq!(*got.0.object, s);
-        assert_eq!(*got.1.object, s);
+        let got = s.intersect_with(r);
+        assert_eq!(got.len(), 2);
+        assert_eq!(*got[0].object, *s);
+        assert_eq!(*got[1].object, *s);
     }
 
     #[test]
     fn hit_all_intersections_positive() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(1.0, &s);
-        let i2 = Intersection::new(2.0, &s);
-        let xs = vec![i1, i2];
+        let s = Arc::new(Sphere::default());
+        let i1 = Intersection::new(1.0, s.clone());
+        let i2 = Intersection::new(2.0, s.clone());
+        let xs = vec![i1.clone(), i2];
 
         let got = hit(xs).unwrap();
         let want = i1;
@@ -269,10 +199,10 @@ mod tests {
 
     #[test]
     fn hit_some_negative() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(-1.0, &s);
-        let i2 = Intersection::new(1.0, &s);
-        let xs = vec![i1, i2];
+        let s = Arc::new(Sphere::default());
+        let i1 = Intersection::new(-1.0, s.clone());
+        let i2 = Intersection::new(1.0, s.clone());
+        let xs = vec![i1, i2.clone()];
 
         let got = hit(xs).unwrap();
         let want = i2;
@@ -281,9 +211,9 @@ mod tests {
 
     #[test]
     fn hit_all_negative() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(-2.0, &s);
-        let i2 = Intersection::new(-1.0, &s);
+        let s = Arc::new(Sphere::default());
+        let i1 = Intersection::new(-2.0, s.clone());
+        let i2 = Intersection::new(-1.0, s.clone());
         let xs = vec![i1, i2];
 
         let got = hit(xs);
@@ -292,12 +222,12 @@ mod tests {
 
     #[test]
     fn hit_always_lowest_nonneg() {
-        let s = Sphere::default();
-        let i1 = Intersection::new(5.0, &s);
-        let i2 = Intersection::new(7.0, &s);
-        let i3 = Intersection::new(-3.0, &s);
-        let i4 = Intersection::new(2.0, &s);
-        let xs = vec![i1, i2, i3, i4];
+        let s = Arc::new(Sphere::default());
+        let i1 = Intersection::new(5.0, s.clone());
+        let i2 = Intersection::new(7.0, s.clone());
+        let i3 = Intersection::new(-3.0, s.clone());
+        let i4 = Intersection::new(2.0, s.clone());
+        let xs = vec![i1, i2, i3, i4.clone()];
 
         let got = hit(xs).unwrap();
         let want = i4;
@@ -309,7 +239,7 @@ mod tests {
         let r = Ray::new(Point::new(1.0, 2.0, 3.0), Vector::new(0.0, 1.0, 0.0));
         let t = Tr::default().translate(3.0, 4.0, 5.0);
 
-        let got = r.transform(t);
+        let got = r.with_transform(t);
         assert_eq!(got.origin, Point::new(4.0, 6.0, 8.0));
         assert_eq!(got.direction, Vector::new(0.0, 1.0, 0.0));
     }
@@ -319,104 +249,19 @@ mod tests {
         let r = Ray::new(Point::new(1.0, 2.0, 3.0), Vector::new(0.0, 1.0, 0.0));
         let t = Tr::default().scale(2.0, 3.0, 4.0);
 
-        let got = r.transform(t);
+        let got = r.with_transform(t);
         assert_eq!(got.origin, Point::new(2.0, 6.0, 12.0));
         assert_eq!(got.direction, Vector::new(0.0, 3.0, 0.0));
     }
 
     #[test]
-    fn sphere_default_transform() {
-        let s = Sphere::default();
-        assert_eq!(s.transform(), Tr::default());
-    }
-
-    #[test]
-    fn changing_sphere_transformation() {
-        let t = Tr::default().translate(2.0, 3.0, 4.0);
-        let s = Sphere::default().with_transform(t);
-        assert_eq!(s.transform(), t);
-    }
-
-    #[test]
-    fn intersecting_scaled_sphere_with_ray() {
-        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Sphere::default().with_transform(Tr::default().scale(2.0, 2.0, 2.0));
-
-        let (a, b) = r.when_intersect_sphere(&s).unwrap();
-        assert_eq!(a.t, 3.0);
-        assert_eq!(b.t, 7.0);
-    }
-
-    #[test]
-    fn intersecting_translated_sphere_with_ray() {
-        let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let s = Sphere::default().with_transform(Tr::default().translate(5.0, 0.0, 0.0));
-
-        let got = r.when_intersect_sphere(&s);
-        assert!(got.is_none());
-    }
-
-    #[test]
-    fn normals_on_sphere() {
-        let s = Sphere::default();
-        let tests = vec![
-            (Point::new(1.0, 0.0, 0.0), Vector::new(1.0, 0.0, 0.0)),
-            (Point::new(0.0, 1.0, 0.0), Vector::new(0.0, 1.0, 0.0)),
-            (Point::new(0.0, 0.0, 1.0), Vector::new(0.0, 0.0, 1.0)),
-            (
-                Point::new(
-                    3.0_f64.sqrt() / 3.0,
-                    3.0_f64.sqrt() / 3.0,
-                    3.0_f64.sqrt() / 3.0,
-                ),
-                Vector::new(
-                    3.0_f64.sqrt() / 3.0,
-                    3.0_f64.sqrt() / 3.0,
-                    3.0_f64.sqrt() / 3.0,
-                ),
-            ),
-        ];
-
-        for test in tests {
-            let (p, want) = test;
-            let got = s.normal_at(p);
-            assert_eq!(got, want);
-        }
-    }
-
-    #[test]
-    fn normal_on_translated_sphere() {
-        let s = Sphere::default().with_transform(Tr::default().translate(0.0, 1.0, 0.0));
-
-        let got = s.normal_at(Point::new(0.0, 1.70711, -0.70711));
-        let want = Vector::new(0.0, 0.70711, -0.70711);
-        assert_eq!(got, want);
-    }
-
-    #[test]
-    fn normal_on_transformed_sphere() {
-        let s = Sphere::default()
-            .with_transform(Tr::default().rotate_z(FRAC_PI_4).scale(1.0, 0.5, 1.0));
-
-        let got = s.normal_at(Point::new(0.0, 2.0_f64.sqrt() / 2.0, -2.0_f64.sqrt() / 2.0));
-        let want = Vector::new(0.0, 0.97014, -0.24253);
-        assert_eq!(got, want);
-    }
-
-    #[test]
-    fn sphere_has_a_default_material() {
-        let s = Sphere::default();
-        assert_eq!(s.material(), Material::default());
-    }
-
-    #[test]
     fn precomputing_state_of_an_intersection() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Sphere::default();
-        let i = Intersection::new(4.0, &shape);
+        let shape = Arc::new(Sphere::default());
+        let i = Intersection::new(4.0, shape);
         let comps = i.prepare_computations(r);
         assert_eq!(comps.t, i.t);
-        assert_eq!(comps.object, i.object);
+        assert_eq!(*comps.object, *i.object);
         assert_eq!(comps.point, Point::new(0.0, 0.0, -1.0));
         assert_eq!(comps.eyev, Vector::new(0.0, 0.0, -1.0));
         assert_eq!(comps.normalv, Vector::new(0.0, 0.0, -1.0));
@@ -425,8 +270,8 @@ mod tests {
     #[test]
     fn when_intersect_occurs_on_outside() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Sphere::default();
-        let i = Intersection::new(4.0, &shape);
+        let shape = Arc::new(Sphere::default());
+        let i = Intersection::new(4.0, shape);
         let comps = i.prepare_computations(r);
         assert_eq!(comps.inside, false);
     }
@@ -434,8 +279,8 @@ mod tests {
     #[test]
     fn when_intersect_occurs_on_inside() {
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Sphere::default();
-        let i = Intersection::new(1.0, &shape);
+        let shape = Arc::new(Sphere::default());
+        let i = Intersection::new(1.0, shape);
         let comps = i.prepare_computations(r);
         assert_eq!(comps.point, Point::new(0.0, 0.0, 1.0));
         assert_eq!(comps.eyev, Vector::new(0.0, 0.0, -1.0));
@@ -446,8 +291,9 @@ mod tests {
     #[test]
     fn hit_should_offset_point() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 1.0));
-        let i = Intersection::new(5.0, &shape);
+        let shape =
+            Arc::new(Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 1.0)));
+        let i = Intersection::new(5.0, shape);
         let comps = i.prepare_computations(r);
 
         assert!(comps.over_point.z() < -EPSILON / 2.0);

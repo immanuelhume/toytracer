@@ -1,13 +1,14 @@
 use crate::color::Color;
 use crate::light::{is_shadowed, lighting, Material, PointLight};
 use crate::ray::{hit, IntersectionVals, Ray};
-use crate::sphere::Sphere;
+use crate::shapes::{Object, Sphere};
 use crate::transform::Tr;
 use crate::tuple::Point;
+use std::sync::Arc;
 
 pub struct World {
     pub light: Option<PointLight>,
-    pub objects: Vec<Sphere>,
+    pub objects: Vec<Object>,
 }
 
 impl World {
@@ -24,8 +25,21 @@ impl World {
         self
     }
 
-    pub fn add_objects(mut self, mut objects: Vec<Sphere>) -> Self {
+    pub fn add_objects(mut self, mut objects: Vec<Object>) -> Self {
         self.objects.append(&mut objects);
+        self
+    }
+
+    pub fn with_objects(mut self, objects: Vec<Object>) -> Self {
+        self.objects = objects;
+        self
+    }
+
+    pub fn map_objects<T>(mut self, f: T) -> Self
+    where
+        T: Fn(Object) -> Object,
+    {
+        self.objects = self.objects.into_iter().map(f).collect();
         self
     }
 
@@ -57,8 +71,7 @@ impl World {
 impl Default for World {
     fn default() -> Self {
         let light = PointLight::new(Point::new(-10.0, 10.0, -10.0), Color::new(1.0, 1.0, 1.0));
-        let mut s1 = Sphere::default();
-        s1.set_material(
+        let s1 = Sphere::default().with_material(
             Material::default()
                 .with_color(Color::new(0.8, 1.0, 0.6))
                 .with_diffuse(0.7)
@@ -67,7 +80,7 @@ impl Default for World {
         let s2 = Sphere::default().with_transform(Tr::default().scale(0.5, 0.5, 0.5));
         Self {
             light: Some(light),
-            objects: vec![s1, s2],
+            objects: vec![Arc::new(s1), Arc::new(s2)],
         }
     }
 }
@@ -76,11 +89,12 @@ impl Default for World {
 mod tests {
     use super::World;
     use crate::color::Color;
-    use crate::light::PointLight;
+    use crate::light::{Material, PointLight};
     use crate::ray::{Intersection, Ray};
-    use crate::sphere::Sphere;
+    use crate::shapes::Sphere;
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
+    use std::sync::Arc;
 
     #[test]
     fn creating_a_world() {
@@ -118,7 +132,7 @@ mod tests {
     fn shading_an_intersection() {
         let w = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = &w.objects[0];
+        let shape = w.objects[0].clone();
         let i = Intersection::new(4.0, shape);
         let comps = i.prepare_computations(r);
 
@@ -135,7 +149,7 @@ mod tests {
             Color::new(1.0, 1.0, 1.0),
         ));
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
-        let shape = &w.objects[1];
+        let shape = w.objects[1].clone();
         let i = Intersection::new(0.5, shape);
         let comps = i.prepare_computations(r);
 
@@ -166,11 +180,22 @@ mod tests {
 
     #[test]
     fn color_when_intersection_behind_ray() {
-        let mut w = World::default();
-        let outer = &mut w.objects[0];
-        outer.set_material(outer.material().with_ambient(1.0));
-        let inner = &mut w.objects[1];
-        inner.set_material(inner.material().with_ambient(1.0));
+        let w = World::default().with_objects(vec![
+            Arc::new(
+                Sphere::default().with_material(
+                    Material::default()
+                        .with_color(Color::new(0.8, 1.0, 0.6))
+                        .with_ambient(1.0)
+                        .with_diffuse(0.7)
+                        .with_specular(0.2),
+                ),
+            ),
+            Arc::new(
+                Sphere::default()
+                    .with_transform(Tr::default().scale(0.5, 0.5, 0.5))
+                    .with_material(Material::default().with_ambient(1.0)),
+            ),
+        ]);
         let r = Ray::new(Point::new(0.0, 0.0, 0.75), Vector::new(0.0, 0.0, -1.0));
 
         let got = w.color_at(r);
@@ -186,11 +211,11 @@ mod tests {
                 Color::new(1.0, 1.0, 1.0),
             ))
             .add_objects(vec![
-                Sphere::default(),
-                Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 10.0)),
+                Arc::new(Sphere::default()),
+                Arc::new(Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 10.0))),
             ]);
         let r = Ray::new(Point::new(0.0, 0.0, 5.0), Vector::new(0.0, 0.0, 1.0));
-        let i = Intersection::new(4.0, &w.objects[1]);
+        let i = Intersection::new(4.0, w.objects[1].clone());
         let comps = i.prepare_computations(r);
 
         let got = w.shade_hit(comps);

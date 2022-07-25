@@ -5,7 +5,7 @@ use std::fs::write;
 use toytracer::canvas::Canvas;
 use toytracer::color::Color;
 use toytracer::ray::Ray;
-use toytracer::sphere::Sphere;
+use toytracer::shapes::{Shape, Sphere};
 use toytracer::transform::Tr;
 use toytracer::tuple::Point;
 use toytracer::{file_exists, pad_filepath};
@@ -44,10 +44,9 @@ fn main() {
                 WALL_Z,
             );
             let ray = Ray::new(ray_origin, ray_end - ray_origin);
-            match ray.when_intersect_sphere(&s) {
-                Some(_) => canvas.write_to(i, j, red),
-                _ => (),
-            }
+            s.intersect_with(ray).into_iter().for_each(|_| {
+                canvas.write_to(i, j, red);
+            })
         }
     }
 
