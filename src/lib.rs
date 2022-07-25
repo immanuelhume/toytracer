@@ -16,6 +16,7 @@ pub mod world;
 /// A much more lenient epsilon for convenience.
 const EPSILON: f64 = 1e-5;
 
+#[macro_export]
 macro_rules! assert_f64_eq {
     ($a:expr, $b:expr) => {
         assert!(($a - $b).abs() < 100.0 * std::f64::EPSILON);
@@ -25,8 +26,6 @@ macro_rules! assert_f64_eq {
         assert!(($a - $b).abs() < $eps);
     };
 }
-
-pub(crate) use assert_f64_eq;
 
 /// Represents a globally unique ID within the lifetime of the program.
 static UID: AtomicUsize = AtomicUsize::new(0);

@@ -109,6 +109,14 @@ impl Point {
     }
 }
 
+/// Produces a point.
+#[macro_export]
+macro_rules! p {
+    ($x:expr, $y:expr, $z:expr) => {
+        Point::new($x, $y, $z)
+    };
+}
+
 impl ops::Sub<Point> for Point {
     type Output = Vector;
 
@@ -180,6 +188,14 @@ impl Vector {
     pub fn reflect(&self, v: Vector) -> Vector {
         *self - v * 2.0 * self.dot(v)
     }
+}
+
+/// Produces a vector, the linear algebra kind.
+#[macro_export]
+macro_rules! v {
+    ($x:expr, $y:expr, $z:expr) => {
+        Vector::new($x, $y, $z)
+    };
 }
 
 impl ops::Sub<Vector> for Vector {

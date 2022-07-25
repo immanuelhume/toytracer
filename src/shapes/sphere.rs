@@ -82,7 +82,7 @@ impl Sphere {
         self
     }
 
-    pub fn into_object(self) -> Object {
+    pub fn as_object(self) -> Object {
         self.into()
     }
 }
