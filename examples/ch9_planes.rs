@@ -1,18 +1,18 @@
 use std::env;
-use std::f64::consts::{FRAC_PI_2, FRAC_PI_3, FRAC_PI_4};
+use std::f64::consts::{FRAC_PI_2, FRAC_PI_3};
 use std::fs::write;
 use toytracer::camera::Camera;
 use toytracer::color::Color;
 use toytracer::light::{Material, PointLight};
-use toytracer::patterns::{Pattern, Stripe};
+use toytracer::patterns::{Checkers, Gradient, Pattern, Stripe};
 use toytracer::shapes::{Plane, Sphere};
 use toytracer::transform::{view_transform, Tr};
 use toytracer::tuple::{Point, Vector};
 use toytracer::world::World;
 use toytracer::{file_exists, p, pad_filepath, v};
 
-const WIDTH: usize = 1024;
-const HEIGHT: usize = 512;
+const WIDTH: usize = 16 * 100;
+const HEIGHT: usize = 9 * 100;
 const FOV: f64 = FRAC_PI_3;
 
 fn main() {
@@ -21,57 +21,116 @@ fn main() {
 
     println!("output will be written to {}", path);
 
-    let floor = Plane::default()
-        .with_material(
-            Material::default()
-                .with_specular(0.1)
-                .with_color(Color::boysenberry()),
-        )
-        .as_object();
-    let ceil = Plane::default()
-        .with_transform(Tr::default().translate(0.0, 6.0, 0.0))
-        .with_material(floor.material())
-        .as_object();
-    let wall = Plane::default()
-        .with_transform(Tr::default().rotate_z(FRAC_PI_2).translate(-5.0, 0.0, 0.0))
-        .with_material(floor.material())
-        .as_object();
-
-    let s1 = Sphere::default()
-        .with_material(Material::default().with_color(Color::watermelon()))
-        .with_transform(Tr::default().translate(5.0, 1.0, 1.0).scale(1.0, 1.0, 1.0))
-        .as_object();
-
-    let s2 = Sphere::default()
-        .with_material(
-            Material::default().with_pattern(
-                Stripe::new(Color::watermelon(), Color::dolphin_gray())
-                    .with_transform(
-                        Tr::default()
-                            .scale(0.2, 1.0, 1.0)
-                            .rotate_y(-FRAC_PI_4)
-                            .rotate_z(FRAC_PI_3),
-                    )
-                    .as_box(),
-            ),
-        )
-        .with_transform(Tr::default().translate(0.0, 1.0, -2.0).scale(2.0, 2.0, 2.0))
-        .as_object();
-
-    let s3 = Sphere::default()
-        .with_material(Material::default().with_color(Color::crayola_gold()))
-        .with_transform(Tr::default().scale(0.2, 0.2, 0.2).translate(10.0, 0.2, 0.0))
-        .as_object();
-
-    let world = World::default()
-        .with_objects(vec![floor, ceil, wall, s1, s2, s3])
-        .with_light(PointLight::new(p!(20.0, 5.0, 10.0), Color::white()));
-
     let camera = Camera::new(WIDTH, HEIGHT, FOV).with_transform(view_transform(
-        p!(15.0, 1.0, 0.0),
-        p!(-10.0, 2.0, 0.0),
-        v!(0.0, 1.0, 0.0),
+        p!(10.0, 4.0, -5.0),
+        p!(-10.0, 1.0, 4.0),
+        v!(0.0, 1.0, 0.05),
     ));
+    let mut world = World::new().with_light(PointLight::new(p!(6.0, 4.0, 3.0), Color::white()));
+
+    {
+        // Set up the room.
+        let floor = Plane::default()
+            .with_material(
+                Material::default().with_specular(0.1).with_pattern(
+                    Checkers::new(Color::sh_black_coral(), Color::sh_pale_silver())
+                        .with_transform(Tr::default().scale_prop(1.75))
+                        .as_box(),
+                ),
+            )
+            .as_object();
+        let ceil = Plane::default()
+            .with_transform(Tr::default().translate(0.0, 6.0, 0.0))
+            .with_material(floor.material())
+            .as_object();
+        let wall = Plane::default()
+            .with_transform(Tr::default().rotate_z(FRAC_PI_2).translate(-6.0, 0.0, 0.0))
+            .with_material(floor.material())
+            .as_object();
+
+        world.add_objects(vec![floor, ceil, wall]);
+    }
+
+    {
+        let big_pink = Sphere::default()
+            .with_material(
+                Material::default()
+                    .with_pattern(
+                        Gradient::new(Color::pw_lemon_chiffon(), Color::pw_charm_pink())
+                            .with_transform(Tr::default().scale_prop(2.0).translate(1.0, 0.0, 0.0))
+                            .as_box(),
+                    )
+                    .with_specular(0.6),
+            )
+            .with_transform(
+                Tr::default()
+                    .scale_prop(1.7)
+                    .rotate_y(FRAC_PI_3)
+                    .translate(0.0, 1.7, 1.8),
+            )
+            .as_object();
+
+        world.add_objects(vec![big_pink]);
+    }
+
+    {
+        let a = Sphere::default()
+            .with_material(
+                Material::default()
+                    .with_pattern(
+                        Stripe::new(Color::sh_taupe_gray(), Color::sh_slate_gray())
+                            .with_transform(Tr::default().scale(0.28, 1.0, 1.0))
+                            .as_box(),
+                    )
+                    .with_specular(0.3),
+            )
+            .with_transform(
+                Tr::default()
+                    .rotate_z(0.2)
+                    .rotate_y(FRAC_PI_2)
+                    .rotate_x(0.2)
+                    .translate(2.0, 1.0, -4.0),
+            )
+            .as_object();
+
+        let b = Sphere::default()
+            .with_material(
+                Material::default().with_pattern(
+                    Stripe::new(Color::sh_pale_silver(), Color::sh_slate_gray())
+                        .with_transform(Tr::default().scale(0.25, 1.0, 1.0))
+                        .as_box(),
+                ),
+            )
+            .with_transform(
+                Tr::default()
+                    .scale_prop(1.0)
+                    .rotate_y(FRAC_PI_2)
+                    .rotate_x(FRAC_PI_3)
+                    .rotate_z(-0.1)
+                    .translate(-1.0, 1.0, -4.0),
+            )
+            .as_object();
+
+        let c = Sphere::default()
+            .with_material(
+                Material::default().with_pattern(
+                    Stripe::new(Color::sh_pale_silver(), Color::sh_ash_gray())
+                        .with_transform(Tr::default().scale(0.23, 1.0, 1.0))
+                        .as_box(),
+                ),
+            )
+            .with_transform(
+                Tr::default()
+                    .scale_prop(1.0)
+                    .rotate_y(FRAC_PI_2)
+                    .rotate_x(FRAC_PI_2 - 0.1)
+                    .rotate_z(0.1)
+                    .translate(-0.8, 1.0, -6.0),
+            )
+            .as_object();
+
+        world.add_objects(vec![a, b, c]);
+    }
 
     let canvas = camera.render(&world);
     write(path, canvas.to_ppm().as_bytes()).unwrap();

@@ -44,10 +44,28 @@ macro_rules! add_color {
 add_color! {
     white: 256, 256, 256,
     black: 0, 0, 0,
-    dolphin_gray: 116, 146, 140,
-    crayola_gold: 227, 256, 236,
-    watermelon: 232, 102, 137,
-    boysenberry: 130, 57, 103,
+
+    // Smoky haze
+    sh_ash_gray: 178, 196, 181,
+    sh_slate_gray: 116, 132, 137,
+    sh_black_coral: 90, 87, 110,
+    sh_taupe_gray: 143, 132, 140,
+    sh_pale_silver: 199, 192, 183,
+
+    // Pastel wedding
+    pw_melon: 255, 188, 166,
+    pw_light_salmon_pink: 255, 158, 158,
+    pw_lemon_chiffon: 255, 245, 204,
+    pw_navajo_white: 355, 224, 171,
+    pw_charm_pink: 235, 143, 166,
+
+    // Gently electrifying
+    ge_blue_violet: 123, 66, 238,
+    ge_turquoise: 61, 217, 216,
+    ge_magic_mint: 175, 248, 202,
+    ge_cornsilk: 252, 246, 224,
+    ge_champagne_pink: 246, 215, 202,
+    ge_united_nations_blue: 96, 240, 221,
 }
 
 impl ops::Add<Color> for Color {

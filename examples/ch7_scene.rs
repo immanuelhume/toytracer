@@ -52,12 +52,11 @@ fn main() {
         .with_material(Material::default().with_color(Color::new(1.0, 0.5, 1.0)))
         .as_object();
 
-    let world = World::new()
-        .with_light(PointLight::new(
-            Point::new(18.0, 15.0, 10.0),
-            Color::white(),
-        ))
-        .add_objects(vec![floor, wall, s1, s2]);
+    let mut world = World::new().with_light(PointLight::new(
+        Point::new(18.0, 15.0, 10.0),
+        Color::white(),
+    ));
+    world.add_objects(vec![floor, wall, s1, s2]);
     let camera = Camera::new(WIDTH, HEIGHT, FOV).with_transform(view_transform(
         Point::new(15.0, 3.0, 0.0),
         Point::new(-7.0, 3.0, 0.0),

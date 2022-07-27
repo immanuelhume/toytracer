@@ -95,7 +95,7 @@ pub fn lighting(
     // pattern instead of the material's default color.
     let effective_color = match &*m.pattern {
         None => m.color * light.intensity,
-        Some(pat) => pat.color_at_object(obj, p) * light.intensity,
+        Some(pat) => pat.color_on_object(obj, p) * light.intensity,
     };
     let ambient = effective_color * m.ambient;
     // If the point is in shadow, then only the ambient contributes to its color.

@@ -25,9 +25,8 @@ impl World {
         self
     }
 
-    pub fn add_objects(mut self, mut objects: Vec<Object>) -> Self {
+    pub fn add_objects(&mut self, mut objects: Vec<Object>) {
         self.objects.append(&mut objects);
-        self
     }
 
     pub fn with_objects(mut self, objects: Vec<Object>) -> Self {
@@ -205,17 +204,16 @@ mod tests {
 
     #[test]
     fn shade_hit_with_intersection_in_shadow() {
-        let w = World::default()
-            .with_light(PointLight::new(
-                Point::new(0.0, 0.0, -10.0),
-                Color::new(1.0, 1.0, 1.0),
-            ))
-            .add_objects(vec![
-                Sphere::default().as_object(),
-                Sphere::default()
-                    .with_transform(Tr::default().translate(0.0, 0.0, 10.0))
-                    .as_object(),
-            ]);
+        let mut w = World::default().with_light(PointLight::new(
+            Point::new(0.0, 0.0, -10.0),
+            Color::new(1.0, 1.0, 1.0),
+        ));
+        w.add_objects(vec![
+            Sphere::default().as_object(),
+            Sphere::default()
+                .with_transform(Tr::default().translate(0.0, 0.0, 10.0))
+                .as_object(),
+        ]);
         let r = Ray::new(p!(0.0, 0.0, 5.0), v!(0.0, 0.0, 1.0));
         let i = Intersection::new(4.0, w.objects[1].clone());
         let comps = i.prepare_computations(r);

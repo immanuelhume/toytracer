@@ -106,6 +106,10 @@ impl Tr {
         Self(scaling(x, y, z) * self.0)
     }
 
+    pub fn scale_prop(self, val: f64) -> Self {
+        Self(scaling(val, val, val) * self.0)
+    }
+
     pub fn rotate_x(self, rad: f64) -> Self {
         Self(rotation_x(rad) * self.0)
     }
