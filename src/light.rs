@@ -89,6 +89,9 @@ impl Material {
 
 /// Computes the appropriate color at some point. This is the main function responsible for
 /// figuring out the appropriate color for some pixel.
+///
+/// Note that the point passed to this function should be the `over_point`, nudged slightly away
+/// from the surface.
 pub fn lighting(
     m: Material,
     obj: &dyn Shape,

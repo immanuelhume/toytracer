@@ -2,6 +2,7 @@ use crate::color::Color;
 use crate::shapes::Shape;
 use crate::transform::Tr;
 use crate::tuple::Point;
+use crate::EPSILON;
 use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;

@@ -53,7 +53,7 @@ impl World {
             &*c.object,
             self.light
                 .unwrap_or(PointLight::new(Point::origin(), Color::black())),
-            c.point,
+            c.over_point,
             c.eyev,
             c.normalv,
             is_shadowed(self, c.over_point),

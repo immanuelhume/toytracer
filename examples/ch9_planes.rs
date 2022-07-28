@@ -11,8 +11,8 @@ use toytracer::tuple::{Point, Vector};
 use toytracer::world::World;
 use toytracer::{file_exists, p, pad_filepath, v};
 
-const WIDTH: usize = 16 * 128;
-const HEIGHT: usize = 9 * 128;
+const WIDTH: usize = 16 * 100;
+const HEIGHT: usize = 9 * 100;
 const FOV: f64 = FRAC_PI_3;
 
 fn main() {
@@ -26,7 +26,7 @@ fn main() {
         p!(-10.0, 1.0, 4.0),
         v!(0.0, 1.0, 0.05),
     ));
-    let mut world = World::new().with_light(PointLight::new(p!(6.0, 4.0, 3.0), Color::white()));
+    let mut world = World::new().with_light(PointLight::new(p!(8.0, 4.0, 2.0), Color::white()));
 
     {
         // Set up the room.
@@ -62,9 +62,13 @@ fn main() {
         let big_pink = Sphere::default()
             .with_material(
                 Material::default()
-                    .with_color(Color::pw_charm_pink())
                     .with_specular(0.6)
-                    .with_reflective(1.0),
+                    .with_reflective(0.8)
+                    // .with_pattern(
+                    //     Gradient::new(Color::pw_charm_pink(), Color::pw_light_salmon_pink())
+                    //         .as_box(),
+                    // )
+                    .with_color(Color::sh_taupe_gray()),
             )
             .with_transform(
                 Tr::default()
