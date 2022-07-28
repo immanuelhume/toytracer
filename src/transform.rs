@@ -94,7 +94,11 @@ impl Default for Tr {
 }
 
 impl Tr {
-    pub fn identity(self) -> Self {
+    pub fn new() -> Self {
+        Self(Matrix::<4, 4>::ident())
+    }
+
+    pub fn ident(self) -> Self {
         self
     }
 

@@ -1,5 +1,5 @@
 use crate::color::Color;
-use crate::light::{is_shadowed, lighting, Material, PointLight};
+use crate::light::{is_shadowed, lighting, reflected_color, Material, PointLight};
 use crate::ray::{hit, IntersectionVals, Ray};
 use crate::shapes::{Object, Sphere};
 use crate::transform::Tr;
@@ -42,9 +42,13 @@ impl World {
         self
     }
 
-    fn shade_hit(&self, c: IntersectionVals) -> Color {
-        let shadowed = is_shadowed(self, c.over_point);
-        lighting(
+    pub fn clear_objects(&mut self) {
+        self.objects.clear();
+    }
+
+    /// Computes the correct color at some point of intersection (between a ray and an object).
+    pub fn shade_hit(&self, c: IntersectionVals, limit: u16) -> Color {
+        let surface = lighting(
             c.object.material(),
             &*c.object,
             self.light
@@ -52,17 +56,21 @@ impl World {
             c.point,
             c.eyev,
             c.normalv,
-            shadowed,
-        )
+            is_shadowed(self, c.over_point),
+        );
+        let reflected = reflected_color(self, c, limit);
+        surface + reflected
     }
 
-    pub fn color_at(&self, r: Ray) -> Color {
+    /// Given a ray, computes the color of the point which the ray hits. If the ray does not hit
+    /// any point it just returns black.
+    pub fn color_at(&self, r: Ray, limit: u16) -> Color {
         let intersections = r.when_intersect_world(self);
         if intersections.len() == 0 {
             return Color::black();
         }
         match hit(intersections) {
-            Some(i) => self.shade_hit(i.prepare_computations(r)),
+            Some(i) => self.shade_hit(i.prepare_computations(r), limit),
             None => Color::black(),
         }
     }
@@ -94,7 +102,7 @@ mod tests {
     use crate::shapes::Sphere;
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
-    use crate::{p, v};
+    use crate::{p, v, MAX_REFLECTION};
 
     #[test]
     fn creating_a_world() {
@@ -136,7 +144,7 @@ mod tests {
         let i = Intersection::new(4.0, shape);
         let comps = i.prepare_computations(r);
 
-        let got = w.shade_hit(comps);
+        let got = w.shade_hit(comps, MAX_REFLECTION);
         let want = Color::new(0.38066, 0.47583, 0.2855);
         assert_eq!(got, want);
     }
@@ -153,7 +161,7 @@ mod tests {
         let i = Intersection::new(0.5, shape);
         let comps = i.prepare_computations(r);
 
-        let got = w.shade_hit(comps);
+        let got = w.shade_hit(comps, MAX_REFLECTION);
         let want = Color::new(0.90498, 0.90498, 0.90498);
         assert_eq!(got, want);
     }
@@ -163,7 +171,7 @@ mod tests {
         let w = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 1.0, 0.0));
 
-        let got = w.color_at(r);
+        let got = w.color_at(r, MAX_REFLECTION);
         let want = Color::new(0.0, 0.0, 0.0);
         assert_eq!(got, want);
     }
@@ -173,7 +181,7 @@ mod tests {
         let w = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
 
-        let got = w.color_at(r);
+        let got = w.color_at(r, MAX_REFLECTION);
         let want = Color::new(0.38066, 0.47583, 0.2855);
         assert_eq!(got, want);
     }
@@ -197,7 +205,7 @@ mod tests {
         ]);
         let r = Ray::new(Point::new(0.0, 0.0, 0.75), Vector::new(0.0, 0.0, -1.0));
 
-        let got = w.color_at(r);
+        let got = w.color_at(r, MAX_REFLECTION);
         let want = w.objects[1].material().color();
         assert_eq!(got, want);
     }
@@ -218,7 +226,7 @@ mod tests {
         let i = Intersection::new(4.0, w.objects[1].clone());
         let comps = i.prepare_computations(r);
 
-        let got = w.shade_hit(comps);
+        let got = w.shade_hit(comps, MAX_REFLECTION);
         let want = Color::new(0.1, 0.1, 0.1);
         assert_eq!(got, want);
     }

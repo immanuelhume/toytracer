@@ -1,11 +1,10 @@
-use std::sync::Arc;
-
 use crate::color::Color;
 use crate::patterns::{Pattern, PatternX};
-use crate::ray::{hit, Ray};
+use crate::ray::{hit, IntersectionVals, Ray};
 use crate::shapes::Shape;
 use crate::tuple::{Point, Vector};
 use crate::world::World;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointLight {
@@ -29,6 +28,7 @@ pub struct Material {
     diffuse: f64,
     specular: f64,
     shininess: f64,
+    reflective: f64,
     pattern: PatternX,
 }
 
@@ -40,6 +40,7 @@ impl Default for Material {
             diffuse: 0.9,
             specular: 0.9,
             shininess: 200.0,
+            reflective: 0.0,
             pattern: Arc::new(None),
         }
     }
@@ -79,9 +80,15 @@ impl Material {
         self.pattern = Arc::new(Some(p));
         self
     }
+
+    pub fn with_reflective(mut self, reflective: f64) -> Self {
+        self.reflective = reflective;
+        self
+    }
 }
 
-/// Computes the appropriate color at some point.
+/// Computes the appropriate color at some point. This is the main function responsible for
+/// figuring out the appropriate color for some pixel.
 pub fn lighting(
     m: Material,
     obj: &dyn Shape,
@@ -141,15 +148,31 @@ pub fn is_shadowed(w: &World, p: Point) -> bool {
     }
 }
 
+/// Computes the reflected component of the color at some intersection.
+pub fn reflected_color(w: &World, comps: IntersectionVals, limit: u16) -> Color {
+    if limit <= 0 {
+        return Color::white();
+    }
+    if comps.object.material().reflective == 0.0 {
+        return Color::black();
+    }
+    let reflect_ray = Ray::new(comps.over_point, comps.reflectv);
+    let color = w.color_at(reflect_ray, limit - 1);
+    color * comps.object.material().reflective
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{is_shadowed, lighting, Material, PointLight};
+    use super::{is_shadowed, lighting, reflected_color, Material, PointLight};
     use crate::color::Color;
     use crate::patterns::{Pattern, Stripe};
-    use crate::shapes::Sphere;
+    use crate::ray::{Intersection, Ray};
+    use crate::shapes::{Plane, Sphere};
+    use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
     use crate::world::World;
-    use crate::{p, v};
+    use crate::{p, v, MAX_REFLECTION};
+    use std::f64::consts::SQRT_2;
 
     #[test]
     fn point_light_has_position_and_intensity() {
@@ -294,5 +317,90 @@ mod tests {
             false,
         );
         assert_eq!(c2, Color::black());
+    }
+
+    #[test]
+    fn default_material_is_not_reflective() {
+        let m = Material::default();
+        assert_eq!(m.reflective, 0.0);
+    }
+
+    #[test]
+    fn precompute_reflection_vector() {
+        let shape = Plane::default().as_object();
+        let ray = Ray::new(p!(0, 1, -1), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
+        let i = Intersection::new(SQRT_2, shape);
+        let comps = i.prepare_computations(ray);
+
+        let got = comps.reflectv;
+        let want = v!(0, SQRT_2 / 2.0, SQRT_2 / 2.0);
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn reflected_color_for_nonreflective_material() {
+        let s = Sphere::default()
+            .with_transform(Tr::default().scale(0.5, 0.5, 0.5))
+            .with_material(Material::default().with_ambient(1.0))
+            .as_object();
+        let mut w = World::default();
+        w.clear_objects();
+        w.add_objects(vec![s.clone()]);
+        let i = Intersection::new(1.0, s);
+
+        let r = Ray::new(Point::origin(), v!(0, 0, 1));
+        let comps = i.prepare_computations(r);
+        let color = reflected_color(&w, comps, 1);
+        assert_eq!(color, Color::black());
+    }
+
+    #[test]
+    fn reflected_color_for_reflective_material() {
+        let mut w = World::default();
+        let shape = Plane::default()
+            .with_material(Material::default().with_reflective(0.5))
+            .with_transform(Tr::default().translate(0.0, -1.0, 0.0))
+            .as_object();
+        w.add_objects(vec![shape.clone()]);
+        let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
+        let i = Intersection::new(SQRT_2, shape);
+
+        let comps = i.prepare_computations(r);
+        let color = reflected_color(&w, comps, MAX_REFLECTION);
+        assert_eq!(color, Color::new(0.19033, 0.23792, 0.14275));
+    }
+
+    #[test]
+    fn shade_hit_with_reflective_material() {
+        let mut w = World::default();
+        let shape = Plane::default()
+            .with_material(Material::default().with_reflective(0.5))
+            .with_transform(Tr::default().translate(0.0, -1.0, 0.0))
+            .as_object();
+        w.add_objects(vec![shape.clone()]);
+        let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
+        let i = Intersection::new(SQRT_2, shape);
+
+        let comps = i.prepare_computations(r);
+        let color = w.shade_hit(comps, MAX_REFLECTION);
+        assert_eq!(color, Color::new(0.87677, 0.92436, 0.82918));
+    }
+
+    #[test]
+    fn color_at_with_mutually_reflective_surfaces() {
+        // Bounce a ray between two maximally reflective planes to ensure that we don't do infinite
+        // recursion.
+        let mut w = World::new().with_light(PointLight::new(p!(0, 0, 0), Color::white()));
+        let lower = Plane::default()
+            .with_material(Material::default().with_reflective(1.0))
+            .with_transform(Tr::new().translate(0.0, -1.0, 0.0))
+            .as_object();
+        let upper = Plane::default()
+            .with_material(Material::default().with_reflective(1.0))
+            .with_transform(Tr::new().translate(0.0, 1.0, 0.0))
+            .as_object();
+        w.add_objects(vec![lower, upper]);
+        let r = Ray::new(p!(0, 0, 0), v!(0, 1, 0));
+        w.color_at(r, 8); // just want to check that it doesn't run infinitely
     }
 }

@@ -113,7 +113,7 @@ impl Point {
 #[macro_export]
 macro_rules! p {
     ($x:expr, $y:expr, $z:expr) => {
-        Point::new($x, $y, $z)
+        Point::new($x as f64, $y as f64, $z as f64)
     };
 }
 
@@ -185,6 +185,7 @@ impl Vector {
         self.0
     }
 
+    /// Reflects this vector in another.
     pub fn reflect(&self, v: Vector) -> Vector {
         *self - v * 2.0 * self.dot(v)
     }
@@ -194,7 +195,7 @@ impl Vector {
 #[macro_export]
 macro_rules! v {
     ($x:expr, $y:expr, $z:expr) => {
-        Vector::new($x, $y, $z)
+        Vector::new($x as f64, $y as f64, $z as f64)
     };
 }
 

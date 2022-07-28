@@ -82,6 +82,7 @@ impl Intersection {
         let inside = eyev.dot(normalv) < 0.0;
         let normalv = if inside { -normalv } else { normalv };
         let over_point = point + normalv * EPSILON;
+        let reflectv = r.direction().reflect(normalv);
         return IntersectionVals {
             t: self.t,
             object: self.object.clone(),
@@ -90,6 +91,7 @@ impl Intersection {
             normalv,
             inside,
             over_point,
+            reflectv,
         };
     }
 }
@@ -123,8 +125,13 @@ pub struct IntersectionVals {
     pub point: Point,
     pub eyev: Vector,
     pub normalv: Vector,
+    /// Whether the intersection is from the inside of an object.
     pub inside: bool,
+    /// The original point, but shifted slightly in the direction of the normal vector. This is
+    /// needed to prevent fuzzy shadows.
     pub over_point: Point,
+    /// Direction of the reflected ray.
+    pub reflectv: Vector,
 }
 
 #[cfg(test)]

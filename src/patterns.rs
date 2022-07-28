@@ -6,6 +6,7 @@ use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
 
+/// Trait object for a pattern. But wrapped in some shit so we can send it across threads.
 pub type PatternX = Arc<Option<Box<dyn Pattern>>>;
 pub trait Pattern: Send + Sync + Any + Debug {
     fn color_at(&self, p: Point) -> Color;

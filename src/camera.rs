@@ -3,6 +3,7 @@ use crate::ray::Ray;
 use crate::transform::Tr;
 use crate::tuple::Point;
 use crate::world::World;
+use crate::MAX_REFLECTION;
 use rayon::prelude::*;
 
 pub struct Camera {
@@ -73,7 +74,7 @@ impl Camera {
                 let x = idx % self.hsize;
                 let y = idx / self.hsize;
                 let ray = self.ray_for_pixel(x, y);
-                *px = world.color_at(ray);
+                *px = world.color_at(ray, MAX_REFLECTION);
             });
         image
     }
