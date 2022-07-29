@@ -66,6 +66,14 @@ add_color! {
     ge_cornsilk: 252, 246, 224,
     ge_champagne_pink: 246, 215, 202,
     ge_united_nations_blue: 96, 240, 221,
+
+    // Doctor strange
+    ds_root_beer: 33, 4, 1,
+    ds_sangria: 147, 15, 7,
+    ds_maximum_red: 219, 39, 39,
+    ds_diamond: 197, 253, 250,
+    ds_dazzled_blue: 47, 100, 142,
+    ds_space_cadet: 33, 50, 75,
 }
 
 impl ops::Add<Color> for Color {

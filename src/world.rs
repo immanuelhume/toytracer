@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::light::{is_shadowed, lighting, reflected_color, refracted_color, Material, PointLight};
-use crate::ray::{hit, IntersectionVals, Ray};
+use crate::ray::{hit, schlick, ItrsectnVs, Ray};
 use crate::shapes::{Object, Sphere};
 use crate::transform::Tr;
 use crate::tuple::Point;
@@ -41,12 +41,14 @@ impl World {
         self
     }
 
+    /// Removes all objects from the world.
     pub fn clear_objects(&mut self) {
         self.objects.clear();
     }
 
     /// Computes the correct color at some point of intersection (between a ray and an object).
-    pub fn shade_hit(&self, c: IntersectionVals, limit: u16) -> Color {
+    /// This function takes into account reflection and reflection.
+    pub fn shade_hit(&self, c: ItrsectnVs, limit: u16) -> Color {
         let surface = lighting(
             c.object.material(),
             &*c.object,
@@ -59,12 +61,18 @@ impl World {
         );
         let reflected = reflected_color(self, &c, limit);
         let refracted = refracted_color(self, &c, limit);
+
+        let material = c.object.material();
+        if material.refractive_index() > 0.0 && material.transparency() > 0.0 {
+            let reflectance = schlick(c);
+            return surface + reflected * reflectance + refracted * (1.0 - reflectance);
+        }
         surface + reflected + refracted
     }
 
     /// Given a ray, computes the color of the point which the ray hits. If the ray does not hit
     /// any point it just returns black.
-    pub fn color_at(&self, r: Ray, limit: u16) -> Color {
+    pub fn color_of_ray(&self, r: Ray, limit: u16) -> Color {
         let intersections = r.when_intersect_world(self);
         if intersections.len() == 0 {
             return Color::black();
@@ -76,6 +84,7 @@ impl World {
     }
 }
 
+/// Returns a sphere of radius one at the origin. Used for testing.
 pub fn stock_sphere_a() -> Sphere {
     Sphere::default().with_material(
         Material::default()
@@ -85,6 +94,7 @@ pub fn stock_sphere_a() -> Sphere {
     )
 }
 
+/// Returns a sphere of radius half at the origin. Used for testing.
 pub fn stock_sphere_b() -> Sphere {
     Sphere::default().with_transform(Tr::default().scale(0.5, 0.5, 0.5))
 }
@@ -104,11 +114,12 @@ mod tests {
     use super::World;
     use crate::color::Color;
     use crate::light::{Material, PointLight};
-    use crate::ray::{Intersection, Ray};
-    use crate::shapes::Sphere;
+    use crate::ray::{Itrsectn, Ray};
+    use crate::shapes::{Plane, Sphere};
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
     use crate::{p, v, MAX_REFLECTION};
+    use std::f64::consts::SQRT_2;
 
     #[test]
     fn creating_a_world() {
@@ -147,7 +158,7 @@ mod tests {
         let w = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = w.objects[0].clone();
-        let i = Intersection::new(4.0, shape);
+        let i = Itrsectn::new(4.0, shape);
         let comps = i.prepare_computations(r, None);
 
         let got = w.shade_hit(comps, MAX_REFLECTION);
@@ -164,7 +175,7 @@ mod tests {
         ));
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let shape = w.objects[1].clone();
-        let i = Intersection::new(0.5, shape);
+        let i = Itrsectn::new(0.5, shape);
         let comps = i.prepare_computations(r, None);
 
         let got = w.shade_hit(comps, MAX_REFLECTION);
@@ -177,7 +188,7 @@ mod tests {
         let w = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 1.0, 0.0));
 
-        let got = w.color_at(r, MAX_REFLECTION);
+        let got = w.color_of_ray(r, MAX_REFLECTION);
         let want = Color::new(0.0, 0.0, 0.0);
         assert_eq!(got, want);
     }
@@ -187,7 +198,7 @@ mod tests {
         let w = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
 
-        let got = w.color_at(r, MAX_REFLECTION);
+        let got = w.color_of_ray(r, MAX_REFLECTION);
         let want = Color::new(0.38066, 0.47583, 0.2855);
         assert_eq!(got, want);
     }
@@ -211,7 +222,7 @@ mod tests {
         ]);
         let r = Ray::new(Point::new(0.0, 0.0, 0.75), Vector::new(0.0, 0.0, -1.0));
 
-        let got = w.color_at(r, MAX_REFLECTION);
+        let got = w.color_of_ray(r, MAX_REFLECTION);
         let want = w.objects[1].material().color();
         assert_eq!(got, want);
     }
@@ -229,11 +240,39 @@ mod tests {
                 .as_object(),
         ]);
         let r = Ray::new(p!(0.0, 0.0, 5.0), v!(0.0, 0.0, 1.0));
-        let i = Intersection::new(4.0, w.objects[1].clone());
+        let i = Itrsectn::new(4.0, w.objects[1].clone());
         let comps = i.prepare_computations(r, None);
 
         let got = w.shade_hit(comps, MAX_REFLECTION);
         let want = Color::new(0.1, 0.1, 0.1);
         assert_eq!(got, want);
+    }
+
+    #[test]
+    fn shade_hit_with_reflective_transparent_material() {
+        let mut w = World::default();
+        let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
+        let floor = Plane::default()
+            .with_transform(Tr::new().translate(0.0, -1.0, 0.0))
+            .with_material(
+                Material::default()
+                    .with_reflective(0.5)
+                    .with_transparency(0.5)
+                    .with_refractive_index(1.5),
+            )
+            .as_object();
+        let ball = Sphere::default()
+            .with_transform(Tr::new().translate(0.0, -3.5, -0.5))
+            .with_material(
+                Material::default()
+                    .with_color(Color::new(1.0, 0.0, 0.0))
+                    .with_ambient(0.5),
+            )
+            .as_object();
+        w.add_objects(vec![floor.clone(), ball]);
+        let xs = vec![Itrsectn::new(SQRT_2, floor.clone())];
+        let comps = xs[0].prepare_computations(r, Some(&xs));
+        let color = w.shade_hit(comps, MAX_REFLECTION);
+        assert_eq!(color, Color::new(0.93391, 0.69643, 0.69243));
     }
 }

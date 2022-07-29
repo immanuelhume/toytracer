@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::patterns::{Pattern, PatternX};
-use crate::ray::{hit, IntersectionVals, Ray};
+use crate::ray::{hit, ItrsectnVs, Ray};
 use crate::shapes::Shape;
 use crate::tuple::{Point, Vector};
 use crate::world::World;
@@ -103,6 +103,10 @@ impl Material {
     pub fn refractive_index(&self) -> f64 {
         self.refractive_index
     }
+
+    pub fn transparency(&self) -> f64 {
+        self.transparency
+    }
 }
 
 /// Computes the appropriate color at some point. This is the main function responsible for
@@ -170,23 +174,29 @@ pub fn is_shadowed(w: &World, p: Point) -> bool {
 }
 
 /// Computes the reflected component of the color at some intersection.
-pub fn reflected_color(w: &World, comps: &IntersectionVals, limit: u16) -> Color {
+pub fn reflected_color(w: &World, comps: &ItrsectnVs, limit: u16) -> Color {
+    // If we've already reached the recursion limit, just assume that it is gonna reflect forever,
+    // and return white.
     if limit <= 0 {
         return Color::white();
     }
     if comps.object.material().reflective == 0.0 {
         return Color::black();
     }
+    // Reflect the ray, and find out what color the reflected ray's intersection ends up producing.
     let reflect_ray = Ray::new(comps.over_point, comps.reflectv);
-    let color = w.color_at(reflect_ray, limit - 1);
+    let color = w.color_of_ray(reflect_ray, limit - 1);
     color * comps.object.material().reflective
 }
 
-pub fn refracted_color(w: &World, comps: &IntersectionVals, limit: u16) -> Color {
+/// Computes the refracted component of the color at some intersection.
+pub fn refracted_color(w: &World, comps: &ItrsectnVs, limit: u16) -> Color {
     if limit <= 0 || comps.object.material().transparency == 0.0 {
         return Color::black();
     }
 
+    // Not too sure what's going on here. But it's like how we compute the reflected color --
+    // generate the refracted ray, then find out the color that ray produces.
     let n_ratio = comps.n1 / comps.n2;
     let cos_i = comps.eyev.dot(comps.normalv);
     let sin2_t = n_ratio * n_ratio * (1.0 - cos_i * cos_i);
@@ -198,7 +208,7 @@ pub fn refracted_color(w: &World, comps: &IntersectionVals, limit: u16) -> Color
     let direction = comps.normalv * (n_ratio * cos_i - cos_t) - comps.eyev * n_ratio;
     let refract_ray = Ray::new(comps.under_point, direction);
 
-    w.color_at(refract_ray, limit - 1) * comps.object.material().transparency
+    w.color_of_ray(refract_ray, limit - 1) * comps.object.material().transparency
 }
 
 #[cfg(test)]
@@ -206,7 +216,7 @@ mod tests {
     use super::{is_shadowed, lighting, reflected_color, refracted_color, Material, PointLight};
     use crate::color::Color;
     use crate::patterns::{Pattern, Stripe};
-    use crate::ray::{Intersection, Ray};
+    use crate::ray::{Itrsectn, Ray};
     use crate::shapes::{Plane, Sphere};
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
@@ -369,7 +379,7 @@ mod tests {
     fn precompute_reflection_vector() {
         let shape = Plane::default().as_object();
         let ray = Ray::new(p!(0, 1, -1), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
-        let i = Intersection::new(SQRT_2, shape);
+        let i = Itrsectn::new(SQRT_2, shape);
         let comps = i.prepare_computations(ray, None);
 
         let got = comps.reflectv;
@@ -386,7 +396,7 @@ mod tests {
         let mut w = World::default();
         w.clear_objects();
         w.add_objects(vec![s.clone()]);
-        let i = Intersection::new(1.0, s);
+        let i = Itrsectn::new(1.0, s);
 
         let r = Ray::new(Point::origin(), v!(0, 0, 1));
         let comps = i.prepare_computations(r, None);
@@ -403,7 +413,7 @@ mod tests {
             .as_object();
         w.add_objects(vec![shape.clone()]);
         let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
-        let i = Intersection::new(SQRT_2, shape);
+        let i = Itrsectn::new(SQRT_2, shape);
 
         let comps = i.prepare_computations(r, None);
         let color = reflected_color(&w, &comps, MAX_REFLECTION);
@@ -419,7 +429,7 @@ mod tests {
             .as_object();
         w.add_objects(vec![shape.clone()]);
         let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
-        let i = Intersection::new(SQRT_2, shape);
+        let i = Itrsectn::new(SQRT_2, shape);
 
         let comps = i.prepare_computations(r, None);
         let color = w.shade_hit(comps, MAX_REFLECTION);
@@ -441,7 +451,7 @@ mod tests {
             .as_object();
         w.add_objects(vec![lower, upper]);
         let r = Ray::new(p!(0, 0, 0), v!(0, 1, 0));
-        w.color_at(r, 8); // just want to check that it doesn't run infinitely
+        w.color_of_ray(r, 8); // just want to check that it doesn't run infinitely
     }
 
     #[test]
@@ -484,12 +494,12 @@ mod tests {
             .as_object();
         let r = Ray::new(p!(0, 0, -4), v!(0, 0, 1));
         let xs = vec![
-            Intersection::new(2.0, a.clone()),
-            Intersection::new(2.75, b.clone()),
-            Intersection::new(3.25, c.clone()),
-            Intersection::new(4.75, b.clone()),
-            Intersection::new(5.25, c.clone()),
-            Intersection::new(6.0, a.clone()),
+            Itrsectn::new(2.0, a.clone()),
+            Itrsectn::new(2.75, b.clone()),
+            Itrsectn::new(3.25, c.clone()),
+            Itrsectn::new(4.75, b.clone()),
+            Itrsectn::new(5.25, c.clone()),
+            Itrsectn::new(6.0, a.clone()),
         ];
         let tests = vec![
             (1.0, 1.5),
@@ -513,8 +523,8 @@ mod tests {
         let shape = w.objects[0].clone();
         let r = Ray::new(p!(0, 0, -5), v!(0, 0, 1));
         let xs = vec![
-            Intersection::new(4.0, shape.clone()),
-            Intersection::new(6.0, shape.clone()),
+            Itrsectn::new(4.0, shape.clone()),
+            Itrsectn::new(6.0, shape.clone()),
         ];
 
         let comps = xs[0].prepare_computations(r, Some(&xs));
@@ -531,8 +541,8 @@ mod tests {
         let w = w.with_objects(vec![shape.clone()]);
         let r = Ray::new(p!(0, 0, -5), v!(0, 0, 1));
         let xs = vec![
-            Intersection::new(4.0, shape.clone()),
-            Intersection::new(6.0, shape.clone()),
+            Itrsectn::new(4.0, shape.clone()),
+            Itrsectn::new(6.0, shape.clone()),
         ];
         let comps = xs[0].prepare_computations(r, Some(&xs));
         let c = refracted_color(&w, &comps, 0);
@@ -548,8 +558,8 @@ mod tests {
         let w = w.with_objects(vec![shape.clone()]);
         let r = Ray::new(p!(0, 0, SQRT_2 / 2.0), v!(0, 1, 0));
         let xs = vec![
-            Intersection::new(-SQRT_2 / 2.0, shape.clone()),
-            Intersection::new(SQRT_2 / 2.0, shape.clone()),
+            Itrsectn::new(-SQRT_2 / 2.0, shape.clone()),
+            Itrsectn::new(SQRT_2 / 2.0, shape.clone()),
         ];
         let comps = xs[1].prepare_computations(r, Some(&xs));
         let c = refracted_color(&w, &comps, MAX_REFLECTION);
@@ -610,10 +620,10 @@ mod tests {
         let w = w.with_objects(vec![a.clone(), b.clone()]);
         let r = Ray::new(p!(0, 0, 0.1), v!(0, 1, 0));
         let xs = vec![
-            Intersection::new(-0.9899, a.clone()),
-            Intersection::new(-0.4899, b.clone()),
-            Intersection::new(0.4899, b.clone()),
-            Intersection::new(0.9899, a.clone()),
+            Itrsectn::new(-0.9899, a.clone()),
+            Itrsectn::new(-0.4899, b.clone()),
+            Itrsectn::new(0.4899, b.clone()),
+            Itrsectn::new(0.9899, a.clone()),
         ];
         let comps = xs[2].prepare_computations(r, Some(&xs));
         let c = refracted_color(&w, &comps, MAX_REFLECTION);
@@ -637,7 +647,7 @@ mod tests {
             .as_object();
         w.add_objects(vec![floor.clone(), ball.clone()]);
         let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
-        let xs = vec![Intersection::new(SQRT_2, floor.clone())];
+        let xs = vec![Itrsectn::new(SQRT_2, floor.clone())];
 
         let comps = xs[0].prepare_computations(r, Some(&xs));
         let color = w.shade_hit(comps, MAX_REFLECTION);

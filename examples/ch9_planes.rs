@@ -4,7 +4,7 @@ use std::fs::write;
 use toytracer::camera::Camera;
 use toytracer::color::Color;
 use toytracer::light::{Material, PointLight};
-use toytracer::patterns::{Checkers, Pattern, Stripe};
+use toytracer::patterns::{Checkers, Pattern};
 use toytracer::shapes::{Plane, Sphere};
 use toytracer::transform::{view_transform, Tr};
 use toytracer::tuple::{Point, Vector};
@@ -64,10 +64,6 @@ fn main() {
                 Material::default()
                     .with_specular(0.6)
                     .with_reflective(0.8)
-                    // .with_pattern(
-                    //     Gradient::new(Color::pw_charm_pink(), Color::pw_light_salmon_pink())
-                    //         .as_box(),
-                    // )
                     .with_color(Color::sh_taupe_gray()),
             )
             .with_transform(
@@ -85,17 +81,13 @@ fn main() {
         let a = Sphere::default()
             .with_material(
                 Material::default()
-                    .with_pattern(
-                        Stripe::new(Color::sh_taupe_gray(), Color::sh_slate_gray())
-                            .with_transform(Tr::default().scale(0.28, 1.0, 1.0))
-                            .as_box(),
-                    )
-                    .with_specular(0.3)
-                    .with_reflective(0.3)
-                    .with_diffuse(0.0)
-                    .with_ambient(0.0)
-                    .with_refractive_index(1.5)
-                    .with_transparency(0.8),
+                    .with_color(Color::ds_sangria())
+                    .with_diffuse(0.2)
+                    .with_shininess(300.0)
+                    .with_specular(1.0)
+                    .with_reflective(0.9)
+                    .with_transparency(0.9)
+                    .with_refractive_index(1.5),
             )
             .with_transform(
                 Tr::default()
@@ -109,16 +101,13 @@ fn main() {
         let b = Sphere::default()
             .with_material(
                 Material::default()
-                    .with_pattern(
-                        Stripe::new(Color::sh_pale_silver(), Color::sh_slate_gray())
-                            .with_transform(Tr::default().scale(0.25, 1.0, 1.0))
-                            .as_box(),
-                    )
-                    .with_diffuse(0.0)
-                    .with_ambient(0.0)
+                    .with_color(Color::ds_dazzled_blue())
+                    .with_diffuse(0.2)
+                    .with_specular(1.0)
+                    .with_shininess(300.0)
                     .with_transparency(0.9)
-                    .with_reflective(0.3)
-                    .with_refractive_index(1.6),
+                    .with_reflective(0.9)
+                    .with_refractive_index(2.0),
             )
             .with_transform(
                 Tr::default()
@@ -133,11 +122,7 @@ fn main() {
         let c = Sphere::default()
             .with_material(
                 Material::default()
-                    .with_pattern(
-                        Stripe::new(Color::sh_pale_silver(), Color::sh_ash_gray())
-                            .with_transform(Tr::default().scale(0.23, 1.0, 1.0))
-                            .as_box(),
-                    )
+                    .with_color(Color::ds_space_cadet())
                     .with_diffuse(0.0)
                     .with_ambient(0.0)
                     .with_transparency(0.9)

@@ -74,7 +74,7 @@ impl Camera {
                 let x = idx % self.hsize;
                 let y = idx / self.hsize;
                 let ray = self.ray_for_pixel(x, y);
-                *px = world.color_at(ray, MAX_REFLECTION);
+                *px = world.color_of_ray(ray, MAX_REFLECTION);
             });
         image
     }

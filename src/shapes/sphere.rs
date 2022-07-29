@@ -1,5 +1,5 @@
 use crate::light::Material;
-use crate::ray::{Intersection, Ray};
+use crate::ray::{Itrsectn, Ray};
 use crate::shapes::{Object, Shape};
 use crate::transform::Tr;
 use crate::tuple::{Point, Vector};
@@ -34,7 +34,7 @@ impl Shape for Sphere {
         self.material.clone()
     }
 
-    fn local_intersect_with(&self, r: Ray) -> Vec<Intersection> {
+    fn local_intersect_with(&self, r: Ray) -> Vec<Itrsectn> {
         let sphere_to_ray = r.origin() - self.center;
         let a = r.direction().dot(r.direction());
         let b = 2.0 * r.direction().dot(sphere_to_ray);
@@ -47,10 +47,7 @@ impl Shape for Sphere {
         let t1 = (-b - discr.sqrt()) / (2.0 * a);
         let t2 = (-b + discr.sqrt()) / (2.0 * a);
         let s = self.clone().as_object();
-        vec![
-            Intersection::new(t1, s.clone()),
-            Intersection::new(t2, s.clone()),
-        ]
+        vec![Itrsectn::new(t1, s.clone()), Itrsectn::new(t2, s.clone())]
     }
 
     fn local_normal_at(&self, p: Point) -> Vector {
