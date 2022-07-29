@@ -58,7 +58,7 @@ fn main() {
             let ray = Ray::new(ray_origin, (ray_end - ray_origin).normalize());
             let eyev = -ray.direction();
 
-            match hit(s.intersect_with(ray)) {
+            match hit(&s.intersect_with(ray)) {
                 Some(h) => {
                     let p = ray.position_at(h.t());
                     let normalv = h.object().normal_at(p);

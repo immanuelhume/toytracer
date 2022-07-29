@@ -1,10 +1,9 @@
 use crate::color::Color;
-use crate::light::{is_shadowed, lighting, reflected_color, Material, PointLight};
+use crate::light::{is_shadowed, lighting, reflected_color, refracted_color, Material, PointLight};
 use crate::ray::{hit, IntersectionVals, Ray};
 use crate::shapes::{Object, Sphere};
 use crate::transform::Tr;
 use crate::tuple::Point;
-use std::sync::Arc;
 
 pub struct World {
     pub light: Option<PointLight>,
@@ -58,8 +57,9 @@ impl World {
             c.normalv,
             is_shadowed(self, c.over_point),
         );
-        let reflected = reflected_color(self, c, limit);
-        surface + reflected
+        let reflected = reflected_color(self, &c, limit);
+        let refracted = refracted_color(self, &c, limit);
+        surface + reflected + refracted
     }
 
     /// Given a ray, computes the color of the point which the ray hits. If the ray does not hit
@@ -69,26 +69,32 @@ impl World {
         if intersections.len() == 0 {
             return Color::black();
         }
-        match hit(intersections) {
-            Some(i) => self.shade_hit(i.prepare_computations(r), limit),
+        match hit(&intersections) {
+            Some(i) => self.shade_hit(i.prepare_computations(r, Some(&intersections)), limit),
             None => Color::black(),
         }
     }
 }
 
+pub fn stock_sphere_a() -> Sphere {
+    Sphere::default().with_material(
+        Material::default()
+            .with_color(Color::new(0.8, 1.0, 0.6))
+            .with_diffuse(0.7)
+            .with_specular(0.2),
+    )
+}
+
+pub fn stock_sphere_b() -> Sphere {
+    Sphere::default().with_transform(Tr::default().scale(0.5, 0.5, 0.5))
+}
+
 impl Default for World {
     fn default() -> Self {
         let light = PointLight::new(Point::new(-10.0, 10.0, -10.0), Color::new(1.0, 1.0, 1.0));
-        let s1 = Sphere::default().with_material(
-            Material::default()
-                .with_color(Color::new(0.8, 1.0, 0.6))
-                .with_diffuse(0.7)
-                .with_specular(0.2),
-        );
-        let s2 = Sphere::default().with_transform(Tr::default().scale(0.5, 0.5, 0.5));
         Self {
             light: Some(light),
-            objects: vec![Arc::new(s1), Arc::new(s2)],
+            objects: vec![stock_sphere_a().as_object(), stock_sphere_b().as_object()],
         }
     }
 }
@@ -142,7 +148,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = w.objects[0].clone();
         let i = Intersection::new(4.0, shape);
-        let comps = i.prepare_computations(r);
+        let comps = i.prepare_computations(r, None);
 
         let got = w.shade_hit(comps, MAX_REFLECTION);
         let want = Color::new(0.38066, 0.47583, 0.2855);
@@ -159,7 +165,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let shape = w.objects[1].clone();
         let i = Intersection::new(0.5, shape);
-        let comps = i.prepare_computations(r);
+        let comps = i.prepare_computations(r, None);
 
         let got = w.shade_hit(comps, MAX_REFLECTION);
         let want = Color::new(0.90498, 0.90498, 0.90498);
@@ -224,7 +230,7 @@ mod tests {
         ]);
         let r = Ray::new(p!(0.0, 0.0, 5.0), v!(0.0, 0.0, 1.0));
         let i = Intersection::new(4.0, w.objects[1].clone());
-        let comps = i.prepare_computations(r);
+        let comps = i.prepare_computations(r, None);
 
         let got = w.shade_hit(comps, MAX_REFLECTION);
         let want = Color::new(0.1, 0.1, 0.1);

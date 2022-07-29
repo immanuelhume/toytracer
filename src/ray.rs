@@ -75,15 +75,21 @@ impl Intersection {
         self.object.clone()
     }
 
-    pub fn prepare_computations(&self, r: Ray) -> IntersectionVals {
+    pub fn prepare_computations(
+        &self,
+        r: Ray,
+        intersections: Option<&Vec<Intersection>>,
+    ) -> IntersectionVals {
         let point = r.position_at(self.t);
         let eyev = -r.direction;
         let normalv = self.object.normal_at(point);
         let inside = eyev.dot(normalv) < 0.0;
         let normalv = if inside { -normalv } else { normalv };
         let over_point = point + normalv * EPSILON;
+        let under_point = point - normalv * EPSILON;
         let reflectv = r.direction().reflect(normalv);
-        return IntersectionVals {
+
+        let mut res = IntersectionVals {
             t: self.t,
             object: self.object.clone(),
             point,
@@ -91,8 +97,43 @@ impl Intersection {
             normalv,
             inside,
             over_point,
+            under_point,
             reflectv,
+            n1: 1.0,
+            n2: 1.0,
         };
+
+        match intersections {
+            None => res,
+            Some(xs) => {
+                // Now compute n1 and n2.
+                let mut containers: Vec<Object> = vec![];
+
+                for i in xs {
+                    if i == self {
+                        // The previous object holds n1.
+                        res.n1 = containers
+                            .last()
+                            .map_or(1.0, |x| x.material().refractive_index())
+                    }
+                    match containers.iter().position(|x| *x == i.clone().object) {
+                        None => {
+                            containers.push(i.clone().object);
+                        }
+                        Some(idx) => {
+                            containers.remove(idx);
+                        }
+                    }
+                    if i == self {
+                        res.n2 = containers
+                            .last()
+                            .map_or(1.0, |x| x.material().refractive_index());
+                        break;
+                    }
+                }
+                res
+            }
+        }
     }
 }
 
@@ -103,15 +144,15 @@ impl PartialEq for Intersection {
 }
 
 /// Given a list of intersections, finds the intersection with the lowest non-negative t value.
-pub fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
+pub fn hit(xs: &Vec<Intersection>) -> Option<Intersection> {
     let mut res: Option<Intersection> = None;
     for x in xs {
         if x.t < 0.0 {
             continue;
         }
         match res {
-            None => res = Some(x),
-            Some(y) if x.t < y.t => res = Some(x),
+            None => res = Some(x.clone()),
+            Some(y) if x.t < y.t => res = Some(x.clone()),
             _ => (),
         }
     }
@@ -119,6 +160,7 @@ pub fn hit(xs: Vec<Intersection>) -> Option<Intersection> {
 }
 
 /// A utility struct with some values related to a point of intersection.
+#[derive(Debug)]
 pub struct IntersectionVals {
     pub t: f64,
     pub object: Object,
@@ -130,17 +172,24 @@ pub struct IntersectionVals {
     /// The original point, but shifted slightly in the direction of the normal vector. This is
     /// needed to prevent fuzzy shadows.
     pub over_point: Point,
+    /// A point nudged just slightly below the original point.
+    pub under_point: Point,
     /// Direction of the reflected ray.
     pub reflectv: Vector,
+    /// Refractive index of the material being exited.
+    pub n1: f64,
+    /// Refractive index of the material being entered.
+    pub n2: f64,
 }
 
 #[cfg(test)]
 mod tests {
     use super::{hit, Intersection, Ray};
+    use crate::light::Material;
     use crate::shapes::Sphere;
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
-    use crate::EPSILON;
+    use crate::{p, v, EPSILON};
     use std::sync::Arc;
 
     #[test]
@@ -199,7 +248,7 @@ mod tests {
         let i2 = Intersection::new(2.0, s);
         let xs = vec![i1.clone(), i2];
 
-        let got = hit(xs).unwrap();
+        let got = hit(&xs).unwrap();
         let want = i1;
         assert_eq!(got, want);
     }
@@ -211,7 +260,7 @@ mod tests {
         let i2 = Intersection::new(1.0, s);
         let xs = vec![i1, i2.clone()];
 
-        let got = hit(xs).unwrap();
+        let got = hit(&xs).unwrap();
         let want = i2;
         assert_eq!(got, want);
     }
@@ -223,7 +272,7 @@ mod tests {
         let i2 = Intersection::new(-1.0, s);
         let xs = vec![i1, i2];
 
-        let got = hit(xs);
+        let got = hit(&xs);
         assert!(got.is_none());
     }
 
@@ -236,7 +285,7 @@ mod tests {
         let i4 = Intersection::new(2.0, s);
         let xs = vec![i1, i2, i3, i4.clone()];
 
-        let got = hit(xs).unwrap();
+        let got = hit(&xs).unwrap();
         let want = i4;
         assert_eq!(got, want);
     }
@@ -266,7 +315,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Arc::new(Sphere::default());
         let i = Intersection::new(4.0, shape);
-        let comps = i.prepare_computations(r);
+        let comps = i.prepare_computations(r, None);
         assert_eq!(comps.t, i.t);
         assert_eq!(*comps.object, *i.object);
         assert_eq!(comps.point, Point::new(0.0, 0.0, -1.0));
@@ -279,7 +328,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Arc::new(Sphere::default());
         let i = Intersection::new(4.0, shape);
-        let comps = i.prepare_computations(r);
+        let comps = i.prepare_computations(r, None);
         assert_eq!(comps.inside, false);
     }
 
@@ -288,7 +337,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Arc::new(Sphere::default());
         let i = Intersection::new(1.0, shape);
-        let comps = i.prepare_computations(r);
+        let comps = i.prepare_computations(r, None);
         assert_eq!(comps.point, Point::new(0.0, 0.0, 1.0));
         assert_eq!(comps.eyev, Vector::new(0.0, 0.0, -1.0));
         assert_eq!(comps.inside, true);
@@ -301,9 +350,31 @@ mod tests {
         let shape =
             Arc::new(Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 1.0)));
         let i = Intersection::new(5.0, shape);
-        let comps = i.prepare_computations(r);
+        let comps = i.prepare_computations(r, None);
 
         assert!(comps.over_point.z() < -EPSILON / 2.0);
         assert!(comps.point.z() > comps.over_point.z());
+    }
+
+    /// A helper function to generate, well, a glass sphere.
+    fn glass_sphere() -> Sphere {
+        Sphere::default().with_material(
+            Material::default()
+                .with_transparency(1.0)
+                .with_refractive_index(1.5),
+        )
+    }
+
+    #[test]
+    fn under_point_is_offset_below_surface() {
+        let r = Ray::new(p!(0, 0, 0), v!(0, 0, 1));
+        let shape = glass_sphere()
+            .with_transform(Tr::new().translate(0.0, 0.0, 1.0))
+            .as_object();
+        let i = Intersection::new(5.0, shape);
+
+        let comps = i.prepare_computations(r, None);
+        assert!(comps.under_point.z() > EPSILON / 2.0);
+        assert!(comps.point.z() < comps.under_point.z());
     }
 }

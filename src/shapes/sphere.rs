@@ -85,6 +85,14 @@ impl Sphere {
         self
     }
 
+    pub fn map_material<T>(mut self, f: T) -> Self
+    where
+        T: FnOnce(Material) -> Material,
+    {
+        self.material = f(self.material);
+        self
+    }
+
     pub fn as_object(self) -> Object {
         Arc::new(self)
     }

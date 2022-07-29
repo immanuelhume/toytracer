@@ -90,7 +90,12 @@ fn main() {
                             .with_transform(Tr::default().scale(0.28, 1.0, 1.0))
                             .as_box(),
                     )
-                    .with_specular(0.3),
+                    .with_specular(0.3)
+                    .with_reflective(0.3)
+                    .with_diffuse(0.0)
+                    .with_ambient(0.0)
+                    .with_refractive_index(1.5)
+                    .with_transparency(0.8),
             )
             .with_transform(
                 Tr::default()
@@ -103,11 +108,17 @@ fn main() {
 
         let b = Sphere::default()
             .with_material(
-                Material::default().with_pattern(
-                    Stripe::new(Color::sh_pale_silver(), Color::sh_slate_gray())
-                        .with_transform(Tr::default().scale(0.25, 1.0, 1.0))
-                        .as_box(),
-                ),
+                Material::default()
+                    .with_pattern(
+                        Stripe::new(Color::sh_pale_silver(), Color::sh_slate_gray())
+                            .with_transform(Tr::default().scale(0.25, 1.0, 1.0))
+                            .as_box(),
+                    )
+                    .with_diffuse(0.0)
+                    .with_ambient(0.0)
+                    .with_transparency(0.9)
+                    .with_reflective(0.3)
+                    .with_refractive_index(1.6),
             )
             .with_transform(
                 Tr::default()
@@ -121,11 +132,17 @@ fn main() {
 
         let c = Sphere::default()
             .with_material(
-                Material::default().with_pattern(
-                    Stripe::new(Color::sh_pale_silver(), Color::sh_ash_gray())
-                        .with_transform(Tr::default().scale(0.23, 1.0, 1.0))
-                        .as_box(),
-                ),
+                Material::default()
+                    .with_pattern(
+                        Stripe::new(Color::sh_pale_silver(), Color::sh_ash_gray())
+                            .with_transform(Tr::default().scale(0.23, 1.0, 1.0))
+                            .as_box(),
+                    )
+                    .with_diffuse(0.0)
+                    .with_ambient(0.0)
+                    .with_transparency(0.9)
+                    .with_reflective(0.2)
+                    .with_refractive_index(2.0),
             )
             .with_transform(
                 Tr::default()

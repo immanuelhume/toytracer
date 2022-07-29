@@ -14,6 +14,9 @@ pub mod transform;
 pub mod tuple;
 pub mod world;
 
+#[macro_use]
+extern crate lazy_static;
+
 /// A much more lenient epsilon for convenience.
 const EPSILON: f64 = 1e-5; // TODO make this configurable
 /// The maximum number of times a ray is allowed to be reflected. Once the limit is reached, it is
