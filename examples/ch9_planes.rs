@@ -1,10 +1,11 @@
 use std::env;
 use std::f64::consts::{FRAC_PI_2, FRAC_PI_3};
 use std::fs::write;
+use std::sync::Arc;
 use toytracer::camera::Camera;
 use toytracer::color::Color;
 use toytracer::light::{Material, PointLight};
-use toytracer::patterns::{Checkers, Pattern};
+use toytracer::patterns::Checkers;
 use toytracer::shapes::{Plane, Sphere};
 use toytracer::transform::{view_transform, Tr};
 use toytracer::tuple::{Point, Vector};
@@ -34,11 +35,10 @@ fn main() {
             .with_material(
                 Material::default()
                     .with_specular(0.1)
-                    .with_pattern(
+                    .with_pattern(Arc::new(
                         Checkers::new(Color::sh_black_coral(), Color::sh_pale_silver())
-                            .with_transform(Tr::default().scale_prop(2.0))
-                            .as_box(),
-                    )
+                            .with_transform(Tr::default().scale_prop(2.0)),
+                    ))
                     .with_reflective(0.1),
             )
             .as_object();

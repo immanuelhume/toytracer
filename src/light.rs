@@ -1,5 +1,5 @@
 use crate::color::Color;
-use crate::patterns::{Pattern, PatternX};
+use crate::patterns::{Graphic, Pattern};
 use crate::ray::{hit, IntersectionVals, Ray};
 use crate::shapes::Shape;
 use crate::tuple::{Point, Vector};
@@ -31,7 +31,8 @@ pub struct Material {
     reflective: f64,
     transparency: f64,
     refractive_index: f64,
-    pattern: PatternX,
+    /// The pattern on the material. This overrides the color, if it is not None.
+    pattern: Graphic,
 }
 
 impl Default for Material {
@@ -45,7 +46,7 @@ impl Default for Material {
             reflective: 0.0,
             transparency: 0.0,
             refractive_index: 1.0,
-            pattern: Arc::new(None),
+            pattern: None,
         }
     }
 }
@@ -80,8 +81,8 @@ impl Material {
         self
     }
 
-    pub fn with_pattern(mut self, p: Box<dyn Pattern>) -> Self {
-        self.pattern = Arc::new(Some(p));
+    pub fn with_pattern(mut self, p: Arc<dyn Pattern>) -> Self {
+        self.pattern = Some(p);
         self
     }
 
@@ -125,7 +126,7 @@ pub fn lighting(
 ) -> Color {
     // Check if the material has a pattern. If there is a pattern, we'll derive the color from the
     // pattern instead of the material's default color.
-    let effective_color = match &*m.pattern {
+    let effective_color = match m.pattern {
         None => m.color * light.intensity,
         Some(pat) => pat.color_on_object(obj, p) * light.intensity,
     };
@@ -223,6 +224,7 @@ mod tests {
     use crate::world::{stock_sphere_a, stock_sphere_b, World};
     use crate::{p, v, MAX_BOUNCE};
     use std::f64::consts::SQRT_2;
+    use std::sync::Arc;
 
     #[test]
     fn point_light_has_position_and_intensity() {
@@ -338,7 +340,7 @@ mod tests {
     #[test]
     fn lighting_with_a_pattern_applied() {
         let m = Material::default()
-            .with_pattern(Stripe::new(Color::white(), Color::black()).as_box())
+            .with_pattern(Arc::new(Stripe::new(Color::white(), Color::black())))
             .with_ambient(1.0)
             .with_diffuse(0.0)
             .with_specular(0.0);
@@ -592,10 +594,6 @@ mod tests {
             todo!()
         }
 
-        fn as_box(self) -> Box<dyn Pattern> {
-            Box::new(self)
-        }
-
         fn transform(&self) -> Tr {
             self.transform
         }
@@ -615,7 +613,7 @@ mod tests {
         let a = stock_sphere_a()
             .map_material(|m| {
                 m.with_ambient(1.0)
-                    .with_pattern(TestPattern::new().as_box())
+                    .with_pattern(Arc::new(TestPattern::new()))
             })
             .as_object();
         let b = stock_sphere_b()

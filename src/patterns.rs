@@ -6,8 +6,8 @@ use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-/// Trait object for a pattern. But wrapped in some shit so we can send it across threads.
-pub type PatternX = Arc<Option<Box<dyn Pattern>>>; // TODO: I think this can be a Option<Arc<dyn Pattern>> instead.
+/// Just a trait object for a pattern. But wrapped in some shit so we can send it across threads.
+pub type Graphic = Option<Arc<dyn Pattern>>;
 pub trait Pattern: Send + Sync + Any + Debug {
     fn color_at(&self, p: Point) -> Color;
     /// Given a shape and a point on that shape (in world space), returns the correct color for
@@ -21,7 +21,6 @@ pub trait Pattern: Send + Sync + Any + Debug {
     fn as_any(&self) -> &dyn Any;
     /// Takes an arbitrary trait object and attempts to downcast it, then check equality.
     fn eqx(&self, other: &dyn Any) -> bool;
-    fn as_box(self) -> Box<dyn Pattern>;
     fn transform(&self) -> Tr;
     fn inv_transform(&self) -> Tr;
     fn set_transform(&mut self, t: Tr);
@@ -75,10 +74,6 @@ impl Pattern for Stripe {
 
     fn eqx(&self, other: &dyn Any) -> bool {
         other.downcast_ref::<Self>().map_or(false, |a| a == self)
-    }
-
-    fn as_box(self) -> Box<dyn Pattern> {
-        Box::new(self)
     }
 
     fn transform(&self) -> Tr {
@@ -135,10 +130,6 @@ impl Pattern for Gradient {
 
     fn eqx(&self, other: &dyn Any) -> bool {
         other.downcast_ref::<Self>().map_or(false, |a| a == self)
-    }
-
-    fn as_box(self) -> Box<dyn Pattern> {
-        Box::new(self)
     }
 
     fn transform(&self) -> Tr {
@@ -199,10 +190,6 @@ impl Pattern for Ring {
         other.downcast_ref::<Self>().map_or(false, |a| a == self)
     }
 
-    fn as_box(self) -> Box<dyn Pattern> {
-        Box::new(self)
-    }
-
     fn transform(&self) -> Tr {
         self.transform
     }
@@ -260,10 +247,6 @@ impl Pattern for Checkers {
 
     fn eqx(&self, other: &dyn Any) -> bool {
         other.downcast_ref::<Self>().map_or(false, |a| a == self)
-    }
-
-    fn as_box(self) -> Box<dyn Pattern> {
-        Box::new(self)
     }
 
     fn transform(&self) -> Tr {
@@ -381,10 +364,6 @@ mod tests {
         }
 
         fn eqx(&self, _: &dyn std::any::Any) -> bool {
-            todo!()
-        }
-
-        fn as_box(self) -> Box<dyn Pattern> {
             todo!()
         }
 

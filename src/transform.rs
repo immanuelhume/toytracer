@@ -140,6 +140,7 @@ impl Tr {
     }
 }
 
+/// Creates a transformation for the camera.
 pub fn view_transform(from: Point, to: Point, up: Vector) -> Tr {
     let forward = (to - from).normalize();
     let left = forward.cross(up.normalize());
