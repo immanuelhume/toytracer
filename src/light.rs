@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::patterns::{Pattern, PatternX};
-use crate::ray::{hit, ItrsectnVs, Ray};
+use crate::ray::{hit, IntersectionVals, Ray};
 use crate::shapes::Shape;
 use crate::tuple::{Point, Vector};
 use crate::world::World;
@@ -174,7 +174,7 @@ pub fn is_shadowed(w: &World, p: Point) -> bool {
 }
 
 /// Computes the reflected component of the color at some intersection.
-pub fn reflected_color(w: &World, comps: &ItrsectnVs, limit: u16) -> Color {
+pub fn reflected_color(w: &World, comps: &IntersectionVals, limit: u16) -> Color {
     // If we've already reached the recursion limit, just assume that it is gonna reflect forever,
     // and return white.
     if limit <= 0 {
@@ -190,7 +190,7 @@ pub fn reflected_color(w: &World, comps: &ItrsectnVs, limit: u16) -> Color {
 }
 
 /// Computes the refracted component of the color at some intersection.
-pub fn refracted_color(w: &World, comps: &ItrsectnVs, limit: u16) -> Color {
+pub fn refracted_color(w: &World, comps: &IntersectionVals, limit: u16) -> Color {
     if limit <= 0 || comps.object.material().transparency == 0.0 {
         return Color::black();
     }

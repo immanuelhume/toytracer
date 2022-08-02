@@ -79,7 +79,7 @@ impl Intersection {
         &self,
         r: Ray,
         intersections: Option<&[Intersection]>,
-    ) -> ItrsectnVs {
+    ) -> IntersectionVals {
         let point = r.position_at(self.t);
         let eyev = -r.direction;
         let normalv = self.object.normal_at(point);
@@ -89,7 +89,7 @@ impl Intersection {
         let under_point = point - normalv * EPSILON;
         let reflectv = r.direction().reflect(normalv);
 
-        let mut res = ItrsectnVs {
+        let mut res = IntersectionVals {
             t: self.t,
             object: self.object.clone(),
             point,
@@ -161,7 +161,7 @@ pub fn hit(xs: &[Intersection]) -> Option<Intersection> {
 
 /// A utility struct with some values related to a point of intersection.
 #[derive(Debug)]
-pub struct ItrsectnVs {
+pub struct IntersectionVals {
     pub t: f64,
     pub object: Object,
     pub point: Point,
@@ -183,7 +183,7 @@ pub struct ItrsectnVs {
 }
 
 /// Computes the reflectance, which is the fraction of light reflected from a surface.
-pub fn schlick(comps: ItrsectnVs) -> f64 {
+pub fn schlick(comps: IntersectionVals) -> f64 {
     let mut cos = comps.eyev.dot(comps.normalv);
     if comps.n1 > comps.n2 {
         // We have total internal reflection.

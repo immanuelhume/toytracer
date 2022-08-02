@@ -1,6 +1,6 @@
 use crate::color::Color;
 use crate::light::{is_shadowed, lighting, reflected_color, refracted_color, Material, PointLight};
-use crate::ray::{hit, schlick, ItrsectnVs, Ray};
+use crate::ray::{hit, schlick, IntersectionVals, Ray};
 use crate::shapes::{Object, Sphere};
 use crate::transform::Tr;
 use crate::tuple::Point;
@@ -48,7 +48,7 @@ impl World {
 
     /// Computes the correct color at some point of intersection (between a ray and an object).
     /// This function takes into account reflection and reflection.
-    pub fn shade_hit(&self, c: ItrsectnVs, limit: u16) -> Color {
+    pub fn shade_hit(&self, c: IntersectionVals, limit: u16) -> Color {
         let surface = lighting(
             c.object.material(),
             &*c.object,
