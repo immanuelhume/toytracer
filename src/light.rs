@@ -216,7 +216,7 @@ mod tests {
     use super::{is_shadowed, lighting, reflected_color, refracted_color, Material, PointLight};
     use crate::color::Color;
     use crate::patterns::{Pattern, Stripe};
-    use crate::ray::{Itrsectn, Ray};
+    use crate::ray::{Intersection, Ray};
     use crate::shapes::{Plane, Sphere};
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
@@ -379,7 +379,7 @@ mod tests {
     fn precompute_reflection_vector() {
         let shape = Plane::default().as_object();
         let ray = Ray::new(p!(0, 1, -1), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
-        let i = Itrsectn::new(SQRT_2, shape);
+        let i = Intersection::new(SQRT_2, shape);
         let comps = i.prepare_computations(ray, None);
 
         let got = comps.reflectv;
@@ -396,7 +396,7 @@ mod tests {
         let mut w = World::default();
         w.clear_objects();
         w.add_objects(vec![s.clone()]);
-        let i = Itrsectn::new(1.0, s);
+        let i = Intersection::new(1.0, s);
 
         let r = Ray::new(Point::origin(), v!(0, 0, 1));
         let comps = i.prepare_computations(r, None);
@@ -413,7 +413,7 @@ mod tests {
             .as_object();
         w.add_objects(vec![shape.clone()]);
         let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
-        let i = Itrsectn::new(SQRT_2, shape);
+        let i = Intersection::new(SQRT_2, shape);
 
         let comps = i.prepare_computations(r, None);
         let color = reflected_color(&w, &comps, MAX_REFLECTION);
@@ -429,7 +429,7 @@ mod tests {
             .as_object();
         w.add_objects(vec![shape.clone()]);
         let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
-        let i = Itrsectn::new(SQRT_2, shape);
+        let i = Intersection::new(SQRT_2, shape);
 
         let comps = i.prepare_computations(r, None);
         let color = w.shade_hit(comps, MAX_REFLECTION);
@@ -494,12 +494,12 @@ mod tests {
             .as_object();
         let r = Ray::new(p!(0, 0, -4), v!(0, 0, 1));
         let xs = vec![
-            Itrsectn::new(2.0, a.clone()),
-            Itrsectn::new(2.75, b.clone()),
-            Itrsectn::new(3.25, c.clone()),
-            Itrsectn::new(4.75, b.clone()),
-            Itrsectn::new(5.25, c.clone()),
-            Itrsectn::new(6.0, a.clone()),
+            Intersection::new(2.0, a.clone()),
+            Intersection::new(2.75, b.clone()),
+            Intersection::new(3.25, c.clone()),
+            Intersection::new(4.75, b.clone()),
+            Intersection::new(5.25, c.clone()),
+            Intersection::new(6.0, a.clone()),
         ];
         let tests = vec![
             (1.0, 1.5),
@@ -523,8 +523,8 @@ mod tests {
         let shape = w.objects[0].clone();
         let r = Ray::new(p!(0, 0, -5), v!(0, 0, 1));
         let xs = vec![
-            Itrsectn::new(4.0, shape.clone()),
-            Itrsectn::new(6.0, shape.clone()),
+            Intersection::new(4.0, shape.clone()),
+            Intersection::new(6.0, shape.clone()),
         ];
 
         let comps = xs[0].prepare_computations(r, Some(&xs));
@@ -541,8 +541,8 @@ mod tests {
         let w = w.with_objects(vec![shape.clone()]);
         let r = Ray::new(p!(0, 0, -5), v!(0, 0, 1));
         let xs = vec![
-            Itrsectn::new(4.0, shape.clone()),
-            Itrsectn::new(6.0, shape.clone()),
+            Intersection::new(4.0, shape.clone()),
+            Intersection::new(6.0, shape.clone()),
         ];
         let comps = xs[0].prepare_computations(r, Some(&xs));
         let c = refracted_color(&w, &comps, 0);
@@ -558,8 +558,8 @@ mod tests {
         let w = w.with_objects(vec![shape.clone()]);
         let r = Ray::new(p!(0, 0, SQRT_2 / 2.0), v!(0, 1, 0));
         let xs = vec![
-            Itrsectn::new(-SQRT_2 / 2.0, shape.clone()),
-            Itrsectn::new(SQRT_2 / 2.0, shape.clone()),
+            Intersection::new(-SQRT_2 / 2.0, shape.clone()),
+            Intersection::new(SQRT_2 / 2.0, shape.clone()),
         ];
         let comps = xs[1].prepare_computations(r, Some(&xs));
         let c = refracted_color(&w, &comps, MAX_REFLECTION);
@@ -620,10 +620,10 @@ mod tests {
         let w = w.with_objects(vec![a.clone(), b.clone()]);
         let r = Ray::new(p!(0, 0, 0.1), v!(0, 1, 0));
         let xs = vec![
-            Itrsectn::new(-0.9899, a.clone()),
-            Itrsectn::new(-0.4899, b.clone()),
-            Itrsectn::new(0.4899, b.clone()),
-            Itrsectn::new(0.9899, a.clone()),
+            Intersection::new(-0.9899, a.clone()),
+            Intersection::new(-0.4899, b.clone()),
+            Intersection::new(0.4899, b.clone()),
+            Intersection::new(0.9899, a.clone()),
         ];
         let comps = xs[2].prepare_computations(r, Some(&xs));
         let c = refracted_color(&w, &comps, MAX_REFLECTION);
@@ -647,7 +647,7 @@ mod tests {
             .as_object();
         w.add_objects(vec![floor.clone(), ball.clone()]);
         let r = Ray::new(p!(0, 0, -3), v!(0, -SQRT_2 / 2.0, SQRT_2 / 2.0));
-        let xs = vec![Itrsectn::new(SQRT_2, floor.clone())];
+        let xs = vec![Intersection::new(SQRT_2, floor.clone())];
 
         let comps = xs[0].prepare_computations(r, Some(&xs));
         let color = w.shade_hit(comps, MAX_REFLECTION);

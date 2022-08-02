@@ -1,5 +1,5 @@
 use crate::light::Material;
-use crate::ray::{Itrsectn, Ray};
+use crate::ray::{Intersection, Ray};
 use crate::shapes::{Object, Shape};
 use crate::transform::Tr;
 use crate::tuple::{Point, Vector};
@@ -41,12 +41,12 @@ impl Shape for Plane {
         self.material = m;
     }
 
-    fn local_intersect_with(&self, r: Ray) -> Vec<Itrsectn> {
+    fn local_intersect_with(&self, r: Ray) -> Vec<Intersection> {
         if r.direction().y().abs() < EPSILON {
             return vec![];
         }
         let t = -r.origin().y() / r.direction().y();
-        vec![Itrsectn::new(t, Arc::new(self.clone()))]
+        vec![Intersection::new(t, Arc::new(self.clone()))]
     }
 
     fn local_normal_at(&self, _: Point) -> Vector {

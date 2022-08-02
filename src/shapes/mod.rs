@@ -5,7 +5,7 @@ pub use sphere::Sphere;
 
 use crate::light::Material;
 use crate::matrix::Matrix;
-use crate::ray::{Itrsectn, Ray};
+use crate::ray::{Intersection, Ray};
 use crate::transform::Tr;
 use crate::tuple::{Point, Tuple, Vector};
 use std::fmt::Debug;
@@ -21,12 +21,12 @@ pub trait Shape: Send + Sync + Debug {
 
     /// Finds the intersections that some ray has with this shape. Note that this method should not
     /// be implemented manually. Instead, implement only `local_intersect_with`.
-    fn intersect_with(&self, r: Ray) -> Vec<Itrsectn> {
+    fn intersect_with(&self, r: Ray) -> Vec<Intersection> {
         let r = r.with_transform(self.transform().inverse());
         self.local_intersect_with(r)
     }
     /// Finds the intersections that some *normalized* ray has with this shape.
-    fn local_intersect_with(&self, r: Ray) -> Vec<Itrsectn>;
+    fn local_intersect_with(&self, r: Ray) -> Vec<Intersection>;
 
     /// Finds the normal vector at some point on the surface of this shape. Note that this method
     /// should not be implemented manually. Instead, implement only `local_normal_at`.
@@ -63,7 +63,7 @@ mod tests {
     use super::Shape;
     use crate::get_uid;
     use crate::light::Material;
-    use crate::ray::{Itrsectn, Ray};
+    use crate::ray::{Intersection, Ray};
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
     use std::f64::consts::PI;
@@ -110,7 +110,7 @@ mod tests {
             self.material.clone()
         }
 
-        fn local_intersect_with(&self, r: Ray) -> Vec<Itrsectn> {
+        fn local_intersect_with(&self, r: Ray) -> Vec<Intersection> {
             *self.saved_ray.lock().unwrap() = Some(r);
             vec![]
         }

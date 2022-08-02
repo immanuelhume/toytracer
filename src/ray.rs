@@ -23,7 +23,7 @@ impl Ray {
 
     /// Finds all the places where this ray intersects with stuff in a given world. The list of
     /// intersections returned will be sorted by increasing distance form the ray's origin.
-    pub fn when_intersect_world(&self, w: &World) -> Vec<Itrsectn> {
+    pub fn when_intersect_world(&self, w: &World) -> Vec<Intersection> {
         let mut res = Vec::new();
         for obj in &w.objects {
             res.append(&mut obj.intersect_with(*self));
@@ -52,12 +52,12 @@ impl Ray {
 }
 
 #[derive(Debug, Clone)]
-pub struct Itrsectn {
+pub struct Intersection {
     t: f64,
     object: Object,
 }
 
-impl Itrsectn {
+impl Intersection {
     pub fn new(t: f64, object: Object) -> Self {
         Self { t, object }
     }
@@ -78,7 +78,7 @@ impl Itrsectn {
     pub fn prepare_computations(
         &self,
         r: Ray,
-        intersections: Option<&Vec<Itrsectn>>,
+        intersections: Option<&[Intersection]>,
     ) -> ItrsectnVs {
         let point = r.position_at(self.t);
         let eyev = -r.direction;
@@ -137,15 +137,15 @@ impl Itrsectn {
     }
 }
 
-impl PartialEq for Itrsectn {
+impl PartialEq for Intersection {
     fn eq(&self, other: &Self) -> bool {
         self.t == other.t && *self.object == *other.object
     }
 }
 
 /// Given a list of intersections, finds the intersection with the lowest non-negative t value.
-pub fn hit(xs: &Vec<Itrsectn>) -> Option<Itrsectn> {
-    let mut res: Option<Itrsectn> = None;
+pub fn hit(xs: &[Intersection]) -> Option<Intersection> {
+    let mut res: Option<Intersection> = None;
     for x in xs {
         if x.t < 0.0 {
             continue;
@@ -202,7 +202,7 @@ pub fn schlick(comps: ItrsectnVs) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{hit, schlick, Itrsectn, Ray};
+    use super::{hit, schlick, Intersection, Ray};
     use crate::light::Material;
     use crate::shapes::Sphere;
     use crate::transform::Tr;
@@ -234,7 +234,7 @@ mod tests {
     #[test]
     fn create_intersection() {
         let s = Sphere::default().as_object();
-        let i = Itrsectn::new(3.5, s.clone());
+        let i = Intersection::new(3.5, s.clone());
 
         assert_eq!(i.t, 3.5);
         assert_eq!(*i.object, *s);
@@ -263,8 +263,8 @@ mod tests {
     #[test]
     fn hit_all_intersections_positive() {
         let s = Sphere::default().as_object();
-        let i1 = Itrsectn::new(1.0, s.clone());
-        let i2 = Itrsectn::new(2.0, s);
+        let i1 = Intersection::new(1.0, s.clone());
+        let i2 = Intersection::new(2.0, s);
         let xs = vec![i1.clone(), i2];
 
         let got = hit(&xs).unwrap();
@@ -275,8 +275,8 @@ mod tests {
     #[test]
     fn hit_some_negative() {
         let s = Sphere::default().as_object();
-        let i1 = Itrsectn::new(-1.0, s.clone());
-        let i2 = Itrsectn::new(1.0, s);
+        let i1 = Intersection::new(-1.0, s.clone());
+        let i2 = Intersection::new(1.0, s);
         let xs = vec![i1, i2.clone()];
 
         let got = hit(&xs).unwrap();
@@ -287,8 +287,8 @@ mod tests {
     #[test]
     fn hit_all_negative() {
         let s = Sphere::default().as_object();
-        let i1 = Itrsectn::new(-2.0, s.clone());
-        let i2 = Itrsectn::new(-1.0, s);
+        let i1 = Intersection::new(-2.0, s.clone());
+        let i2 = Intersection::new(-1.0, s);
         let xs = vec![i1, i2];
 
         let got = hit(&xs);
@@ -298,10 +298,10 @@ mod tests {
     #[test]
     fn hit_always_lowest_nonneg() {
         let s = Sphere::default().as_object();
-        let i1 = Itrsectn::new(5.0, s.clone());
-        let i2 = Itrsectn::new(7.0, s.clone());
-        let i3 = Itrsectn::new(-3.0, s.clone());
-        let i4 = Itrsectn::new(2.0, s);
+        let i1 = Intersection::new(5.0, s.clone());
+        let i2 = Intersection::new(7.0, s.clone());
+        let i3 = Intersection::new(-3.0, s.clone());
+        let i4 = Intersection::new(2.0, s);
         let xs = vec![i1, i2, i3, i4.clone()];
 
         let got = hit(&xs).unwrap();
@@ -333,7 +333,7 @@ mod tests {
     fn precomputing_state_of_an_intersection() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Arc::new(Sphere::default());
-        let i = Itrsectn::new(4.0, shape);
+        let i = Intersection::new(4.0, shape);
         let comps = i.prepare_computations(r, None);
         assert_eq!(comps.t, i.t);
         assert_eq!(*comps.object, *i.object);
@@ -346,7 +346,7 @@ mod tests {
     fn when_intersect_occurs_on_outside() {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Arc::new(Sphere::default());
-        let i = Itrsectn::new(4.0, shape);
+        let i = Intersection::new(4.0, shape);
         let comps = i.prepare_computations(r, None);
         assert_eq!(comps.inside, false);
     }
@@ -355,7 +355,7 @@ mod tests {
     fn when_intersect_occurs_on_inside() {
         let r = Ray::new(Point::new(0.0, 0.0, 0.0), Vector::new(0.0, 0.0, 1.0));
         let shape = Arc::new(Sphere::default());
-        let i = Itrsectn::new(1.0, shape);
+        let i = Intersection::new(1.0, shape);
         let comps = i.prepare_computations(r, None);
         assert_eq!(comps.point, Point::new(0.0, 0.0, 1.0));
         assert_eq!(comps.eyev, Vector::new(0.0, 0.0, -1.0));
@@ -368,7 +368,7 @@ mod tests {
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
         let shape =
             Arc::new(Sphere::default().with_transform(Tr::default().translate(0.0, 0.0, 1.0)));
-        let i = Itrsectn::new(5.0, shape);
+        let i = Intersection::new(5.0, shape);
         let comps = i.prepare_computations(r, None);
 
         assert!(comps.over_point.z() < -EPSILON / 2.0);
@@ -390,7 +390,7 @@ mod tests {
         let shape = glass_sphere()
             .with_transform(Tr::new().translate(0.0, 0.0, 1.0))
             .as_object();
-        let i = Itrsectn::new(5.0, shape);
+        let i = Intersection::new(5.0, shape);
 
         let comps = i.prepare_computations(r, None);
         assert!(comps.under_point.z() > EPSILON / 2.0);
@@ -402,8 +402,8 @@ mod tests {
         let shape = glass_sphere().as_object();
         let r = Ray::new(p!(0, 0, SQRT_2 / 2.0), v!(0, 1, 0));
         let xs = vec![
-            Itrsectn::new(-SQRT_2 / 2.0, shape.clone()),
-            Itrsectn::new(SQRT_2 / 2.0, shape.clone()),
+            Intersection::new(-SQRT_2 / 2.0, shape.clone()),
+            Intersection::new(SQRT_2 / 2.0, shape.clone()),
         ];
         let comps = xs[1].prepare_computations(r, Some(&xs));
         let reflectance = schlick(comps);
@@ -415,8 +415,8 @@ mod tests {
         let shape = glass_sphere().as_object();
         let r = Ray::new(p!(0, 0, 0), v!(0, 1, 0));
         let xs = vec![
-            Itrsectn::new(-1.0, shape.clone()),
-            Itrsectn::new(1.0, shape.clone()),
+            Intersection::new(-1.0, shape.clone()),
+            Intersection::new(1.0, shape.clone()),
         ];
         let comps = xs[1].prepare_computations(r, Some(&xs));
         let reflectance = schlick(comps);
@@ -427,7 +427,7 @@ mod tests {
     fn schlick_approx_with_small_angle_and_n2_ge_n1() {
         let shape = glass_sphere().as_object();
         let r = Ray::new(p!(0, 0.99, -2), v!(0, 0, 1));
-        let xs = vec![Itrsectn::new(1.8589, shape.clone())];
+        let xs = vec![Intersection::new(1.8589, shape.clone())];
         let comps = xs[0].prepare_computations(r, Some(&xs));
         let reflectance = schlick(comps);
         assert_f64_eq!(reflectance, 0.48873, EPSILON);
