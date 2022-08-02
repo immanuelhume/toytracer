@@ -15,6 +15,10 @@ use std::sync::Arc;
 pub type Object = Arc<dyn Shape>;
 pub trait Shape: Send + Sync + Debug {
     fn transform(&self) -> Tr;
+    /// Obtains the inverse transformation for this shape.
+    fn inv_transform(&self) -> Tr;
+    /// Retrieves a 3x3 matrix used for computing normals. See the `normal_at` method for details.
+    fn norm_transform(&self) -> Matrix<3, 3>;
     fn set_transform(&mut self, t: Tr);
     fn material(&self) -> Material;
     fn set_material(&mut self, m: Material);
@@ -22,7 +26,7 @@ pub trait Shape: Send + Sync + Debug {
     /// Finds the intersections that some ray has with this shape. Note that this method should not
     /// be implemented manually. Instead, implement only `local_intersect_with`.
     fn intersect_with(&self, r: Ray) -> Vec<Intersection> {
-        let r = r.with_transform(self.transform().inverse());
+        let r = r.with_transform(self.inv_transform());
         self.local_intersect_with(r)
     }
     /// Finds the intersections that some *normalized* ray has with this shape.
@@ -31,17 +35,10 @@ pub trait Shape: Send + Sync + Debug {
     /// Finds the normal vector at some point on the surface of this shape. Note that this method
     /// should not be implemented manually. Instead, implement only `local_normal_at`.
     fn normal_at(&self, p: Point) -> Vector {
-        let local_point = self.transform().inverse().matrix() * p;
+        let local_point = self.inv_transform().matrix() * p;
         let local_normal = self.local_normal_at(local_point);
         let Tuple(x, y, z, _) = local_normal.inner();
-        let m = self
-            .transform()
-            .matrix()
-            .submatrix(3, 3)
-            .inverse()
-            .unwrap()
-            .transpose()
-            * Matrix::new([[x], [y], [z]]);
+        let m = self.norm_transform() * Matrix::new([[x], [y], [z]]);
         let world_normal = Vector::new(m.get(0, 0), m.get(1, 0), m.get(2, 0));
         world_normal.normalize()
     }
@@ -106,8 +103,29 @@ mod tests {
             self.transform
         }
 
+        fn inv_transform(&self) -> Tr {
+            self.transform.inverse()
+        }
+
+        fn norm_transform(&self) -> crate::matrix::Matrix<3, 3> {
+            self.transform
+                .matrix()
+                .submatrix(3, 3)
+                .inverse()
+                .unwrap()
+                .transpose()
+        }
+
+        fn set_transform(&mut self, t: Tr) {
+            self.transform = t;
+        }
+
         fn material(&self) -> Material {
             self.material.clone()
+        }
+
+        fn set_material(&mut self, m: Material) {
+            self.material = m;
         }
 
         fn local_intersect_with(&self, r: Ray) -> Vec<Intersection> {
@@ -121,14 +139,6 @@ mod tests {
 
         fn id(&self) -> usize {
             self.id
-        }
-
-        fn set_transform(&mut self, t: Tr) {
-            self.transform = t;
-        }
-
-        fn set_material(&mut self, m: Material) {
-            self.material = m;
         }
     }
 

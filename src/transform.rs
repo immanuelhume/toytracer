@@ -130,6 +130,7 @@ impl Tr {
         Self(shearing(xy, xz, yx, yz, zx, zy) * self.0)
     }
 
+    // TODO maybe return Result instead of panicking.
     pub fn inverse(&self) -> Tr {
         Tr(self.0.inverse().unwrap())
     }

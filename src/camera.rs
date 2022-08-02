@@ -3,7 +3,7 @@ use crate::ray::Ray;
 use crate::transform::Tr;
 use crate::tuple::Point;
 use crate::world::World;
-use crate::MAX_REFLECTION;
+use crate::MAX_BOUNCE;
 use rayon::prelude::*;
 
 pub struct Camera {
@@ -11,6 +11,8 @@ pub struct Camera {
     vsize: usize,
     field_of_view: f64,
     transform: Tr,
+    /// Inverse of the transform.
+    inv_transform: Tr,
 
     half_width: f64,
     half_height: f64,
@@ -36,6 +38,7 @@ impl Camera {
             vsize,
             field_of_view,
             transform: Tr::default(),
+            inv_transform: Tr::default(),
             half_width,
             half_height,
             pixel_size,
@@ -50,7 +53,7 @@ impl Camera {
         let world_x = self.half_width - xoffset;
         let world_y = self.half_height - yoffset;
 
-        let transform = self.transform.inverse().matrix();
+        let transform = self.inv_transform.matrix();
         let pixel = transform * Point::new(world_x, world_y, -1.0);
         let origin = transform * Point::origin();
         let direction = (pixel - origin).normalize();
@@ -60,6 +63,7 @@ impl Camera {
 
     pub fn with_transform(mut self, transform: Tr) -> Self {
         self.transform = transform;
+        self.inv_transform = self.transform.inverse();
         self
     }
 
@@ -74,7 +78,7 @@ impl Camera {
                 let x = idx % self.hsize;
                 let y = idx / self.hsize;
                 let ray = self.ray_for_pixel(x, y);
-                *px = world.color_of_ray(ray, MAX_REFLECTION);
+                *px = world.color_of_ray(ray, MAX_BOUNCE);
             });
         image
     }

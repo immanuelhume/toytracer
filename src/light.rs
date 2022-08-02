@@ -221,7 +221,7 @@ mod tests {
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
     use crate::world::{stock_sphere_a, stock_sphere_b, World};
-    use crate::{p, v, MAX_REFLECTION};
+    use crate::{p, v, MAX_BOUNCE};
     use std::f64::consts::SQRT_2;
 
     #[test]
@@ -416,7 +416,7 @@ mod tests {
         let i = Intersection::new(SQRT_2, shape);
 
         let comps = i.prepare_computations(r, None);
-        let color = reflected_color(&w, &comps, MAX_REFLECTION);
+        let color = reflected_color(&w, &comps, MAX_BOUNCE);
         assert_eq!(color, Color::new(0.19033, 0.23792, 0.14275));
     }
 
@@ -432,7 +432,7 @@ mod tests {
         let i = Intersection::new(SQRT_2, shape);
 
         let comps = i.prepare_computations(r, None);
-        let color = w.shade_hit(comps, MAX_REFLECTION);
+        let color = w.shade_hit(comps, MAX_BOUNCE);
         assert_eq!(color, Color::new(0.87675, 0.92434, 0.82917));
     }
 
@@ -528,7 +528,7 @@ mod tests {
         ];
 
         let comps = xs[0].prepare_computations(r, Some(&xs));
-        let c = refracted_color(&w, &comps, MAX_REFLECTION);
+        let c = refracted_color(&w, &comps, MAX_BOUNCE);
         assert_eq!(c, Color::black());
     }
 
@@ -562,7 +562,7 @@ mod tests {
             Intersection::new(SQRT_2 / 2.0, shape.clone()),
         ];
         let comps = xs[1].prepare_computations(r, Some(&xs));
-        let c = refracted_color(&w, &comps, MAX_REFLECTION);
+        let c = refracted_color(&w, &comps, MAX_BOUNCE);
         assert_eq!(c, Color::white());
     }
 
@@ -600,6 +600,10 @@ mod tests {
             self.transform
         }
 
+        fn inv_transform(&self) -> Tr {
+            self.transform.inverse()
+        }
+
         fn set_transform(&mut self, t: Tr) {
             self.transform = t;
         }
@@ -626,7 +630,7 @@ mod tests {
             Intersection::new(0.9899, a.clone()),
         ];
         let comps = xs[2].prepare_computations(r, Some(&xs));
-        let c = refracted_color(&w, &comps, MAX_REFLECTION);
+        let c = refracted_color(&w, &comps, MAX_BOUNCE);
         assert_eq!(c, Color::new(0.0, 0.99887, 0.04721));
     }
 
@@ -650,7 +654,7 @@ mod tests {
         let xs = vec![Intersection::new(SQRT_2, floor.clone())];
 
         let comps = xs[0].prepare_computations(r, Some(&xs));
-        let color = w.shade_hit(comps, MAX_REFLECTION);
+        let color = w.shade_hit(comps, MAX_BOUNCE);
         assert_eq!(color, Color::new(0.93642, 0.68642, 0.68642));
     }
 }

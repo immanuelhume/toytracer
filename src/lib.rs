@@ -16,9 +16,9 @@ pub mod world;
 
 /// A much more lenient epsilon for convenience.
 const EPSILON: f64 = 1e-5; // TODO make this configurable
-/// The maximum number of times a ray is allowed to be reflected. Once the limit is reached, it is
-/// assumed to end at a white pixel.
-const MAX_REFLECTION: u16 = 5;
+/// The maximum number of times a ray is allowed to be reflected or refracted. Once the limit is
+/// reached, it is assumed to end at a white pixel.
+const MAX_BOUNCE: u16 = 5;
 
 #[macro_export]
 macro_rules! assert_f64_eq {

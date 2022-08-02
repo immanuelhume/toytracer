@@ -1,4 +1,5 @@
 use crate::light::Material;
+use crate::matrix::Matrix;
 use crate::ray::{Intersection, Ray};
 use crate::shapes::{Object, Shape};
 use crate::transform::Tr;
@@ -10,7 +11,12 @@ use std::sync::Arc;
 pub struct Sphere {
     id: usize,
     center: Point,
+
     transform: Tr,
+    inv_transform: Tr,
+    /// A matrix used in computing normals.
+    norm_transform: Matrix<3, 3>,
+
     material: Material,
 }
 
@@ -20,6 +26,8 @@ impl Default for Sphere {
             id: get_uid(),
             center: Point::new(0.0, 0.0, 0.0),
             transform: Tr::default(),
+            inv_transform: Tr::default(),
+            norm_transform: Matrix::<3, 3>::ident(),
             material: Material::default(),
         }
     }
@@ -30,8 +38,26 @@ impl Shape for Sphere {
         self.transform
     }
 
+    fn inv_transform(&self) -> Tr {
+        self.inv_transform
+    }
+
+    fn norm_transform(&self) -> crate::matrix::Matrix<3, 3> {
+        self.norm_transform
+    }
+
+    fn set_transform(&mut self, t: Tr) {
+        self.transform = t;
+        self.inv_transform = t.inverse();
+        self.norm_transform = t.matrix().submatrix(3, 3).inverse().unwrap().transpose();
+    }
+
     fn material(&self) -> Material {
         self.material.clone()
+    }
+
+    fn set_material(&mut self, m: Material) {
+        self.material = m;
     }
 
     fn local_intersect_with(&self, r: Ray) -> Vec<Intersection> {
@@ -60,14 +86,6 @@ impl Shape for Sphere {
     fn id(&self) -> usize {
         self.id
     }
-
-    fn set_transform(&mut self, t: Tr) {
-        self.transform = t;
-    }
-
-    fn set_material(&mut self, m: Material) {
-        self.material = m;
-    }
 }
 
 impl Sphere {
@@ -76,7 +94,7 @@ impl Sphere {
     }
 
     pub fn with_transform(mut self, t: Tr) -> Self {
-        self.transform = t;
+        self.set_transform(t);
         self
     }
 

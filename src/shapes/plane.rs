@@ -1,4 +1,5 @@
 use crate::light::Material;
+use crate::matrix::Matrix;
 use crate::ray::{Intersection, Ray};
 use crate::shapes::{Object, Shape};
 use crate::transform::Tr;
@@ -10,7 +11,12 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct Plane {
     id: usize,
+
     transform: Tr,
+    inv_transform: Tr,
+    /// A matrix used in computing normals.
+    norm_transform: Matrix<3, 3>,
+
     material: Material,
 }
 
@@ -19,6 +25,8 @@ impl Default for Plane {
         Self {
             id: get_uid(),
             transform: Tr::default(),
+            inv_transform: Tr::default(),
+            norm_transform: Matrix::<3, 3>::ident(),
             material: Material::default(),
         }
     }
@@ -29,8 +37,18 @@ impl Shape for Plane {
         self.transform
     }
 
+    fn inv_transform(&self) -> Tr {
+        self.inv_transform
+    }
+
+    fn norm_transform(&self) -> Matrix<3, 3> {
+        self.norm_transform
+    }
+
     fn set_transform(&mut self, t: Tr) {
         self.transform = t;
+        self.inv_transform = t.inverse();
+        self.norm_transform = t.matrix().submatrix(3, 3).inverse().unwrap().transpose();
     }
 
     fn material(&self) -> Material {
@@ -60,7 +78,7 @@ impl Shape for Plane {
 
 impl Plane {
     pub fn with_transform(mut self, t: Tr) -> Self {
-        self.transform = t;
+        self.set_transform(t);
         self
     }
 

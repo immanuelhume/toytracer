@@ -118,7 +118,7 @@ mod tests {
     use crate::shapes::{Plane, Sphere};
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
-    use crate::{p, v, MAX_REFLECTION};
+    use crate::{p, v, MAX_BOUNCE};
     use std::f64::consts::SQRT_2;
 
     #[test]
@@ -161,7 +161,7 @@ mod tests {
         let i = Intersection::new(4.0, shape);
         let comps = i.prepare_computations(r, None);
 
-        let got = w.shade_hit(comps, MAX_REFLECTION);
+        let got = w.shade_hit(comps, MAX_BOUNCE);
         let want = Color::new(0.38066, 0.47583, 0.2855);
         assert_eq!(got, want);
     }
@@ -178,7 +178,7 @@ mod tests {
         let i = Intersection::new(0.5, shape);
         let comps = i.prepare_computations(r, None);
 
-        let got = w.shade_hit(comps, MAX_REFLECTION);
+        let got = w.shade_hit(comps, MAX_BOUNCE);
         let want = Color::new(0.90498, 0.90498, 0.90498);
         assert_eq!(got, want);
     }
@@ -188,7 +188,7 @@ mod tests {
         let w = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 1.0, 0.0));
 
-        let got = w.color_of_ray(r, MAX_REFLECTION);
+        let got = w.color_of_ray(r, MAX_BOUNCE);
         let want = Color::new(0.0, 0.0, 0.0);
         assert_eq!(got, want);
     }
@@ -198,7 +198,7 @@ mod tests {
         let w = World::default();
         let r = Ray::new(Point::new(0.0, 0.0, -5.0), Vector::new(0.0, 0.0, 1.0));
 
-        let got = w.color_of_ray(r, MAX_REFLECTION);
+        let got = w.color_of_ray(r, MAX_BOUNCE);
         let want = Color::new(0.38066, 0.47583, 0.2855);
         assert_eq!(got, want);
     }
@@ -222,7 +222,7 @@ mod tests {
         ]);
         let r = Ray::new(Point::new(0.0, 0.0, 0.75), Vector::new(0.0, 0.0, -1.0));
 
-        let got = w.color_of_ray(r, MAX_REFLECTION);
+        let got = w.color_of_ray(r, MAX_BOUNCE);
         let want = w.objects[1].material().color();
         assert_eq!(got, want);
     }
@@ -243,7 +243,7 @@ mod tests {
         let i = Intersection::new(4.0, w.objects[1].clone());
         let comps = i.prepare_computations(r, None);
 
-        let got = w.shade_hit(comps, MAX_REFLECTION);
+        let got = w.shade_hit(comps, MAX_BOUNCE);
         let want = Color::new(0.1, 0.1, 0.1);
         assert_eq!(got, want);
     }
@@ -272,7 +272,7 @@ mod tests {
         w.add_objects(vec![floor.clone(), ball]);
         let xs = vec![Intersection::new(SQRT_2, floor.clone())];
         let comps = xs[0].prepare_computations(r, Some(&xs));
-        let color = w.shade_hit(comps, MAX_REFLECTION);
+        let color = w.shade_hit(comps, MAX_BOUNCE);
         assert_eq!(color, Color::new(0.93391, 0.69643, 0.69243));
     }
 }

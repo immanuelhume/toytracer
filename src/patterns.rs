@@ -7,14 +7,14 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 /// Trait object for a pattern. But wrapped in some shit so we can send it across threads.
-pub type PatternX = Arc<Option<Box<dyn Pattern>>>;
+pub type PatternX = Arc<Option<Box<dyn Pattern>>>; // TODO: I think this can be a Option<Arc<dyn Pattern>> instead.
 pub trait Pattern: Send + Sync + Any + Debug {
     fn color_at(&self, p: Point) -> Color;
     /// Given a shape and a point on that shape (in world space), returns the correct color for
     /// that point. This method should not be implemented manually.
     fn color_on_object(&self, s: &dyn Shape, p: Point) -> Color {
-        let object_p = s.transform().inverse().matrix() * p; // the point, in object space
-        let pattern_p = self.transform().inverse().matrix() * object_p; // the point, in pattern space
+        let object_p = s.inv_transform().matrix() * p; // the point, in object space
+        let pattern_p = self.inv_transform().matrix() * object_p; // the point, in pattern space
         self.color_at(pattern_p)
     }
     /// Converts to the any trait object.
@@ -23,6 +23,7 @@ pub trait Pattern: Send + Sync + Any + Debug {
     fn eqx(&self, other: &dyn Any) -> bool;
     fn as_box(self) -> Box<dyn Pattern>;
     fn transform(&self) -> Tr;
+    fn inv_transform(&self) -> Tr;
     fn set_transform(&mut self, t: Tr);
 }
 
@@ -32,12 +33,14 @@ impl PartialEq for dyn Pattern {
     }
 }
 
+/// A stripe pattern. Like striped pajamas.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Stripe {
     a: Color,
     b: Color,
 
     transform: Tr,
+    inv_transform: Tr,
 }
 
 impl Stripe {
@@ -46,11 +49,13 @@ impl Stripe {
             a,
             b,
             transform: Tr::default(),
+            inv_transform: Tr::default(),
         }
     }
 
     pub fn with_transform(mut self, t: Tr) -> Self {
         self.transform = t;
+        self.inv_transform = t.inverse();
         self
     }
 }
@@ -80,16 +85,24 @@ impl Pattern for Stripe {
         self.transform
     }
 
+    fn inv_transform(&self) -> Tr {
+        self.inv_transform
+    }
+
     fn set_transform(&mut self, t: Tr) {
         self.transform = t;
+        self.inv_transform = t.inverse();
     }
 }
 
+/// A gradient pattern.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Gradient {
     a: Color,
     b: Color,
+
     transform: Tr,
+    inv_transform: Tr,
 }
 
 impl Gradient {
@@ -98,11 +111,13 @@ impl Gradient {
             a,
             b,
             transform: Tr::default(),
+            inv_transform: Tr::default(),
         }
     }
 
     pub fn with_transform(mut self, t: Tr) -> Self {
         self.transform = t;
+        self.inv_transform = t.inverse();
         self
     }
 }
@@ -130,16 +145,24 @@ impl Pattern for Gradient {
         self.transform
     }
 
+    fn inv_transform(&self) -> Tr {
+        self.inv_transform
+    }
+
     fn set_transform(&mut self, t: Tr) {
         self.transform = t;
+        self.inv_transform = t.inverse();
     }
 }
 
+/// Like stripe, but circular.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Ring {
     a: Color,
     b: Color,
+
     transform: Tr,
+    inv_transform: Tr,
 }
 
 impl Ring {
@@ -148,11 +171,13 @@ impl Ring {
             a,
             b,
             transform: Tr::default(),
+            inv_transform: Tr::default(),
         }
     }
 
     pub fn with_transform(mut self, t: Tr) -> Self {
         self.transform = t;
+        self.inv_transform = t.inverse();
         self
     }
 }
@@ -182,16 +207,24 @@ impl Pattern for Ring {
         self.transform
     }
 
+    fn inv_transform(&self) -> Tr {
+        todo!()
+    }
+
     fn set_transform(&mut self, t: Tr) {
         self.transform = t;
+        self.inv_transform = t.inverse();
     }
 }
 
+/// A checkerboard pattern.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Checkers {
     a: Color,
     b: Color,
+
     transform: Tr,
+    inv_transform: Tr,
 }
 
 impl Checkers {
@@ -199,12 +232,15 @@ impl Checkers {
         Self {
             a,
             b,
+
             transform: Tr::default(),
+            inv_transform: Tr::default(),
         }
     }
 
     pub fn with_transform(mut self, t: Tr) -> Self {
         self.transform = t;
+        self.inv_transform = t.inverse();
         self
     }
 }
@@ -234,8 +270,13 @@ impl Pattern for Checkers {
         self.transform
     }
 
+    fn inv_transform(&self) -> Tr {
+        self.inv_transform
+    }
+
     fn set_transform(&mut self, t: Tr) {
         self.transform = t;
+        self.inv_transform = t.inverse();
     }
 }
 
@@ -349,6 +390,10 @@ mod tests {
 
         fn transform(&self) -> Tr {
             self.transform
+        }
+
+        fn inv_transform(&self) -> Tr {
+            self.transform.inverse()
         }
 
         fn set_transform(&mut self, t: Tr) {
