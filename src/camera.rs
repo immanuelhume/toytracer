@@ -1,11 +1,14 @@
 use crate::canvas::Canvas;
 use crate::ray::Ray;
-use crate::transform::Tr;
+use crate::transform::{view_transform, Tr};
 use crate::tuple::Point;
 use crate::world::World;
-use crate::MAX_BOUNCE;
+use crate::{yaml, MAX_BOUNCE};
 use rayon::prelude::*;
+use serde::Deserialize;
 
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(from = "crate::yaml::CameraRepr")]
 pub struct Camera {
     hsize: usize,
     vsize: usize,
@@ -18,6 +21,16 @@ pub struct Camera {
     half_height: f64,
     /// The width of one square pixel.
     pixel_size: f64,
+}
+
+impl From<yaml::CameraRepr> for Camera {
+    fn from(r: yaml::CameraRepr) -> Self {
+        Self::new(r.width, r.height, r.field_of_view).with_transform(view_transform(
+            r.from.into(),
+            r.to.into(),
+            r.up.into(),
+        ))
+    }
 }
 
 impl Camera {

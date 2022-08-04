@@ -13,6 +13,7 @@ pub mod shapes;
 pub mod transform;
 pub mod tuple;
 pub mod world;
+pub mod yaml;
 
 /// A much more lenient epsilon for convenience.
 const EPSILON: f64 = 1e-5; // TODO make this configurable

@@ -4,12 +4,24 @@ use crate::ray::{hit, IntersectionVals, Ray};
 use crate::shapes::Shape;
 use crate::tuple::{Point, Vector};
 use crate::world::World;
+use crate::yaml;
+use serde::Deserialize;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
+#[serde(from = "crate::yaml::PointLightRepr")]
 pub struct PointLight {
     position: Point,
     intensity: Color,
+}
+
+impl From<yaml::PointLightRepr> for PointLight {
+    fn from(r: yaml::PointLightRepr) -> Self {
+        Self {
+            position: r.at.into(),
+            intensity: r.color.into(),
+        }
+    }
 }
 
 impl PointLight {
@@ -107,6 +119,22 @@ impl Material {
 
     pub fn transparency(&self) -> f64 {
         self.transparency
+    }
+
+    pub fn diffuse(&self) -> f64 {
+        self.diffuse
+    }
+
+    pub fn specular(&self) -> f64 {
+        self.specular
+    }
+
+    pub fn ambient(&self) -> f64 {
+        self.ambient
+    }
+
+    pub fn reflective(&self) -> f64 {
+        self.reflective
     }
 }
 
@@ -568,7 +596,7 @@ mod tests {
         assert_eq!(c, Color::white());
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq)]
     struct TestPattern {
         transform: Tr,
     }
@@ -587,11 +615,11 @@ mod tests {
         }
 
         fn as_any(&self) -> &dyn std::any::Any {
-            todo!()
+            self
         }
 
-        fn eqx(&self, _: &dyn std::any::Any) -> bool {
-            todo!()
+        fn eqx(&self, other: &dyn std::any::Any) -> bool {
+            other.downcast_ref::<Self>().map_or(false, |a| a == self)
         }
 
         fn transform(&self) -> Tr {

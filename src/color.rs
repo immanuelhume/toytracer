@@ -128,6 +128,12 @@ impl std::fmt::Display for Color {
     }
 }
 
+impl From<(f64, f64, f64)> for Color {
+    fn from(t: (f64, f64, f64)) -> Self {
+        Color(Tuple(t.0, t.1, t.2, 0.0))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Color;

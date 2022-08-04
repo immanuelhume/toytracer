@@ -8,6 +8,7 @@ use crate::matrix::Matrix;
 use crate::ray::{Intersection, Ray};
 use crate::transform::Tr;
 use crate::tuple::{Point, Tuple, Vector};
+use std::any::Any;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -47,11 +48,16 @@ pub trait Shape: Send + Sync + Debug {
 
     /// Every shape must have a unique ID.
     fn id(&self) -> usize;
+
+    /// Converts to the any trait object.
+    fn as_any(&self) -> &dyn Any;
+    /// Takes an arbitrary trait object and attempts to downcast it, then check equality.
+    fn eqx(&self, other: &dyn Any) -> bool;
 }
 
 impl PartialEq for dyn Shape {
     fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
+        self.eqx(other.as_any())
     }
 }
 
@@ -63,6 +69,7 @@ mod tests {
     use crate::ray::{Intersection, Ray};
     use crate::transform::Tr;
     use crate::tuple::{Point, Vector};
+    use std::any::Any;
     use std::f64::consts::PI;
     use std::sync::Mutex;
 
@@ -139,6 +146,14 @@ mod tests {
 
         fn id(&self) -> usize {
             self.id
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+
+        fn eqx(&self, _: &dyn Any) -> bool {
+            unimplemented!()
         }
     }
 

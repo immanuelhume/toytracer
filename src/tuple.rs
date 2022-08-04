@@ -141,6 +141,12 @@ impl ops::Sub<Vector> for Point {
     }
 }
 
+impl From<(f64, f64, f64)> for Point {
+    fn from(t: (f64, f64, f64)) -> Self {
+        Self(Tuple(t.0, t.1, t.2, 1.0))
+    }
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Vector(Tuple);
 
@@ -239,6 +245,12 @@ impl ops::Neg for Vector {
     fn neg(self) -> Self::Output {
         let Tuple(x, y, z, ..) = -self.0;
         Vector::new(x, y, z)
+    }
+}
+
+impl From<(f64, f64, f64)> for Vector {
+    fn from(t: (f64, f64, f64)) -> Self {
+        Self(Tuple(t.0, t.1, t.2, 0.0))
     }
 }
 

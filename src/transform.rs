@@ -1,3 +1,5 @@
+use serde::Deserialize;
+
 use crate::matrix::Matrix;
 use crate::tuple::{Point, Tuple, Vector};
 use std::ops;
@@ -84,7 +86,8 @@ impl ops::Mul<Vector> for Matrix<4, 4> {
 }
 
 /// A transformation.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
+#[serde(try_from = "crate::yaml::TransformRepr")]
 pub struct Tr(Matrix<4, 4>);
 
 impl Default for Tr {
@@ -137,6 +140,11 @@ impl Tr {
 
     pub fn matrix(&self) -> Matrix<4, 4> {
         self.0
+    }
+
+    /// Applies another transformation to the current one.
+    pub fn and(self, other: Tr) -> Tr {
+        Tr(other.0 * self.0)
     }
 }
 

@@ -58,6 +58,7 @@ impl Matrix<2, 2> {
         a * d - b * c
     }
 
+    #[allow(dead_code)]
     fn is_invertible(&self) -> bool {
         self.det() != 0.0
     }
@@ -74,6 +75,7 @@ impl Matrix<3, 3> {
         res
     }
 
+    #[allow(dead_code)]
     fn minor(&self, i: usize, j: usize) -> f64 {
         self.submatrix(i, j).det()
     }
@@ -127,6 +129,7 @@ impl Matrix<4, 4> {
         res
     }
 
+    #[allow(dead_code)]
     fn minor(&self, i: usize, j: usize) -> f64 {
         self.submatrix(i, j).det()
     }

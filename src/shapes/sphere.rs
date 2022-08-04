@@ -7,7 +7,7 @@ use crate::tuple::{Point, Vector};
 use crate::{get_uid, EPSILON};
 use std::sync::Arc;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 pub struct Sphere {
     id: usize,
     center: Point,
@@ -30,6 +30,17 @@ impl Default for Sphere {
             norm_transform: Matrix::<3, 3>::ident(),
             material: Material::default(),
         }
+    }
+}
+
+// Implemented manually here because we don't want to consider the ID of the shape.
+impl PartialEq for Sphere {
+    fn eq(&self, other: &Self) -> bool {
+        self.center == other.center
+            && self.transform == other.transform
+            && self.inv_transform == other.inv_transform
+            && self.norm_transform == other.norm_transform
+            && self.material == other.material
     }
 }
 
@@ -85,6 +96,14 @@ impl Shape for Sphere {
 
     fn id(&self) -> usize {
         self.id
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn eqx(&self, other: &dyn std::any::Any) -> bool {
+        other.downcast_ref::<Self>().map_or(false, |a| a == self)
     }
 }
 

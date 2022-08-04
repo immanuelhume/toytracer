@@ -32,6 +32,15 @@ impl Default for Plane {
     }
 }
 
+impl PartialEq for Plane {
+    fn eq(&self, other: &Self) -> bool {
+        self.transform == other.transform
+            && self.inv_transform == other.inv_transform
+            && self.norm_transform == other.norm_transform
+            && self.material == other.material
+    }
+}
+
 impl Shape for Plane {
     fn transform(&self) -> Tr {
         self.transform
@@ -74,6 +83,14 @@ impl Shape for Plane {
     fn id(&self) -> usize {
         self.id
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn eqx(&self, other: &dyn std::any::Any) -> bool {
+        other.downcast_ref::<Self>().map_or(false, |a| a == self)
+    }
 }
 
 impl Plane {
@@ -97,7 +114,6 @@ mod tests {
     use super::Plane;
     use crate::ray::Ray;
     use crate::shapes::Shape;
-    use crate::tuple::{Point, Vector};
     use crate::{p, v};
 
     #[test]
