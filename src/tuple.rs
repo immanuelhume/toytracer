@@ -113,7 +113,7 @@ impl Point {
 #[macro_export]
 macro_rules! p {
     ($x:expr, $y:expr, $z:expr) => {
-        Point::new($x as f64, $y as f64, $z as f64)
+        $crate::tuple::Point::new($x as f64, $y as f64, $z as f64)
     };
 }
 
@@ -195,7 +195,7 @@ impl Vector {
 #[macro_export]
 macro_rules! v {
     ($x:expr, $y:expr, $z:expr) => {
-        Vector::new($x as f64, $y as f64, $z as f64)
+        $crate::tuple::Vector::new($x as f64, $y as f64, $z as f64)
     };
 }
 
