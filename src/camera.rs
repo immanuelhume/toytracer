@@ -7,7 +7,7 @@ use crate::{yaml, MAX_BOUNCE};
 use rayon::prelude::*;
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone, Copy)]
 #[serde(from = "crate::yaml::CameraRepr")]
 pub struct Camera {
     hsize: usize,

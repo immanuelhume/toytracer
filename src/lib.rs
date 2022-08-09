@@ -2,6 +2,9 @@
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[macro_use]
+extern crate lazy_static;
+
 pub mod camera;
 pub mod canvas;
 pub mod color;

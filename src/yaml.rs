@@ -6,11 +6,13 @@ use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 
+/// Contains all information about the world except the objects.
+#[derive(Deserialize, Debug, PartialEq)]
 struct Data {
     camera: Camera,
     light: PointLight,
-    materials: HashMap<String, Material>,
-    transforms: HashMap<String, Vec<Tr>>,
+    materials: Materials,
+    transforms: Transforms,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -370,6 +372,9 @@ fn generate_objects(
 
 #[cfg(test)]
 mod tests {
+    use super::{
+        generate_objects, Data, MaterialDefn, ObjectRepr, Shape, TransformRepr, Transforms,
+    };
     use crate::camera::Camera;
     use crate::color::Color;
     use crate::light::{Material, PointLight};
@@ -379,7 +384,40 @@ mod tests {
     use crate::{p, v};
     use std::collections::HashMap;
 
-    use super::{generate_objects, MaterialDefn, ObjectRepr, Shape, TransformRepr, Transforms};
+    /// A complete definition of a world in YAML.
+    const TEST_YAML: &str = include_str!("./spec.yml");
+
+    lazy_static! {
+        static ref CAMERA: Camera = Camera::new(100, 100, 0.785).with_transform(view_transform(
+            p!(-6, 6, -10),
+            p!(6, 0, 6),
+            v!(-0.45, 1.0, 0.0),
+        ));
+        static ref LIGHT: PointLight = PointLight::new(p!(50, 100, -50), Color::new(1.0, 1.0, 1.0));
+        static ref MATERIALS: HashMap<String, Material> = {
+            let mut mats = HashMap::new();
+            let white = Material::default()
+                .with_color(Color::new(1.0, 1.0, 1.0))
+                .with_diffuse(0.7)
+                .with_ambient(0.1)
+                .with_specular(0.0)
+                .with_reflective(0.1);
+            mats.insert("white".to_string(), white.clone());
+            mats.insert(
+                "blue".to_string(),
+                white.with_color(Color::new(0.537, 0.831, 0.914)),
+            );
+            mats
+        };
+        static ref TRANSFORMS: HashMap<String, Tr> = {
+            let mut trs = HashMap::new();
+            let standard = Tr::new().translate(1.0, -1.0, 1.0).scale(0.5, 0.5, 0.5);
+            let large = standard.scale(3.5, 3.5, 3.5);
+            trs.insert("standard".to_string(), standard);
+            trs.insert("large".to_string(), large);
+            trs
+        };
+    }
 
     #[test]
     fn deserialize_camera() {
@@ -391,12 +429,7 @@ from: [ -6, 6, -10 ]
 to: [ 6, 0, 6 ]
 up: [ -0.45, 1, 0 ]"#;
         let got: Camera = serde_yaml::from_str(yaml).expect("deserializes camera");
-        let want = Camera::new(100, 100, 0.785).with_transform(view_transform(
-            p!(-6, 6, -10),
-            p!(6, 0, 6),
-            v!(-0.45, 1.0, 0.0),
-        ));
-        assert_eq!(got, want);
+        assert_eq!(got, *CAMERA);
     }
 
     #[test]
@@ -405,8 +438,7 @@ up: [ -0.45, 1, 0 ]"#;
 at: [ 50, 100, -50 ]
 color: [ 1, 1, 1 ]"#;
         let got: PointLight = serde_yaml::from_str(yaml).expect("deserializes light");
-        let want = PointLight::new(p!(50, 100, -50), Color::new(1.0, 1.0, 1.0));
-        assert_eq!(got, want);
+        assert_eq!(got, *LIGHT);
     }
 
     #[test]
@@ -423,19 +455,7 @@ blue:
     color: [ 0.537, 0.831, 0.914 ]"#;
         let got: Materials =
             serde_yaml::from_str(yaml).expect("deserializes multiple material definitions");
-        let mut want = HashMap::new();
-        let white = Material::default()
-            .with_color(Color::new(1.0, 1.0, 1.0))
-            .with_diffuse(0.7)
-            .with_ambient(0.1)
-            .with_specular(0.0)
-            .with_reflective(0.1);
-        want.insert("white".to_string(), white.clone());
-        want.insert(
-            "blue".to_string(),
-            white.with_color(Color::new(0.537, 0.831, 0.914)),
-        );
-        assert_eq!(got, Materials(want));
+        assert_eq!(got, Materials(MATERIALS.clone()));
     }
 
     #[test]
@@ -465,12 +485,7 @@ large:
     - [ scale, 3.5, 3.5, 3.5 ]"#;
         let got: Transforms =
             serde_yaml::from_str(yaml).expect("deserializes multiple transform definitions");
-        let mut want = HashMap::new();
-        let standard = Tr::new().translate(1.0, -1.0, 1.0).scale(0.5, 0.5, 0.5);
-        let large = standard.scale(3.5, 3.5, 3.5);
-        want.insert("standard".to_string(), standard);
-        want.insert("large".to_string(), large);
-        assert_eq!(got, Transforms(want));
+        assert_eq!(got, Transforms(TRANSFORMS.clone()));
     }
 
     #[test]
@@ -545,30 +560,13 @@ large:
     - [ rotate_x, 1.5707963267948966 ] # pi/2
     - [ translate, 0, 0, 500 ]"#;
         let xs: Vec<ObjectRepr> = serde_yaml::from_str(yaml).expect("deserializes objects");
-
-        // Set up lots of shit to test this function.
-        let mut mats = HashMap::new();
-        let white = Material::default()
-            .with_color(Color::new(1.0, 1.0, 1.0))
-            .with_diffuse(0.7)
-            .with_ambient(0.1)
-            .with_specular(0.0)
-            .with_reflective(0.1);
-        mats.insert("white".to_string(), white.clone());
-
-        let mut trs = HashMap::new();
-        let large = Tr::new()
-            .translate(1.0, -1.0, 1.0)
-            .scale(0.5, 0.5, 0.5)
-            .scale(3.5, 3.5, 3.5);
-        trs.insert("large".to_string(), large);
-
-        let got = generate_objects(&xs, &mats, &trs).expect("should generate objects");
+        let got =
+            generate_objects(&xs, &*MATERIALS, &*TRANSFORMS).expect("should generate objects");
 
         let want = vec![
             Sphere::default()
-                .with_material(white)
-                .with_transform(large)
+                .with_material(MATERIALS.get("white").cloned().unwrap())
+                .with_transform(TRANSFORMS.get("large").cloned().unwrap())
                 .as_object(),
             Plane::default()
                 .with_material(
@@ -585,6 +583,20 @@ large:
                 )
                 .as_object(),
         ];
+
+        assert_eq!(got, want);
+    }
+
+    #[test]
+    fn deserialize_data() {
+        let got = serde_yaml::from_str::<Data>(TEST_YAML).expect("deserializes data");
+
+        let want = Data {
+            camera: *CAMERA,
+            light: *LIGHT,
+            materials: Materials(MATERIALS.clone()),
+            transforms: Transforms(TRANSFORMS.clone()),
+        };
 
         assert_eq!(got, want);
     }
