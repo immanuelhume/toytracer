@@ -2,6 +2,7 @@ use crate::camera::Camera;
 use crate::light::{Material, PointLight};
 use crate::shapes::{Object, Plane, Sphere};
 use crate::transform::Tr;
+use crate::world::World;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
@@ -11,8 +12,10 @@ use std::fmt::Display;
 struct Data {
     camera: Camera,
     light: PointLight,
+    // TODO: these two should be optional fields
     materials: Materials,
     transforms: Transforms,
+    objects: Vec<ObjectRepr>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
@@ -34,12 +37,17 @@ pub struct PointLightRepr {
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(untagged)]
 pub enum MaterialRepr {
+    // TODO these shouldn't be compulsory either. Because everything extends from the default
+    // material.
     Complete {
         color: (f64, f64, f64),
         diffuse: f64,
         ambient: f64,
         specular: f64,
+        shininess: f64,
         reflective: f64,
+        refractive_index: f64,
+        transparency: f64,
     },
     Extends {
         extends: String,
@@ -47,7 +55,10 @@ pub enum MaterialRepr {
         diffuse: Option<f64>,
         ambient: Option<f64>,
         specular: Option<f64>,
+        shininess: Option<f64>,
         reflective: Option<f64>,
+        refractive_index: Option<f64>,
+        transparency: Option<f64>,
     },
 }
 
@@ -68,6 +79,7 @@ pub enum ErrParseYaml {
     Unsupported,
     UnknownTransformation(String),
     UnknownMaterial(String),
+    SerdeError(serde_yaml::Error),
 }
 
 impl Display for ErrParseYaml {
@@ -79,6 +91,7 @@ impl Display for ErrParseYaml {
             Unsupported => write!(f, "An unsupported operation"),
             UnknownTransformation(tr) => write!(f, "Unknown transformation; tr={tr}"),
             UnknownMaterial(mat) => write!(f, "Unknown material; mat={mat}"),
+            SerdeError(err) => write!(f, "Serde error; err={err}"),
         }
     }
 }
@@ -110,7 +123,10 @@ pub fn complete_material(
             diffuse,
             ambient,
             specular,
+            shininess,
             reflective,
+            transparency,
+            refractive_index,
         } => {
             // Recursively complete this material.
             complete_material(&extends, map, seen)?;
@@ -124,15 +140,21 @@ pub fn complete_material(
                     color: c,
                     diffuse: d,
                     ambient: a,
-                    specular: s,
+                    specular: sp,
+                    shininess: sh,
                     reflective: r,
+                    transparency: t,
+                    refractive_index: ri,
                 } => {
                     let res = MaterialRepr::Complete {
                         color: color.unwrap_or(c),
                         diffuse: diffuse.unwrap_or(d),
                         ambient: ambient.unwrap_or(a),
-                        specular: specular.unwrap_or(s),
+                        specular: specular.unwrap_or(sp),
+                        shininess: shininess.unwrap_or(sh),
                         reflective: reflective.unwrap_or(r),
+                        transparency: transparency.unwrap_or(t),
+                        refractive_index: refractive_index.unwrap_or(ri),
                     };
                     map.insert(key.to_string(), res);
                     Ok(())
@@ -169,13 +191,19 @@ impl TryFrom<MaterialRepr> for Material {
                 diffuse,
                 ambient,
                 specular,
+                shininess,
                 reflective,
+                transparency,
+                refractive_index,
             } => Ok(Material::default()
                 .with_color(color.into())
                 .with_diffuse(diffuse)
                 .with_ambient(ambient)
                 .with_specular(specular)
-                .with_reflective(reflective)),
+                .with_reflective(reflective)
+                .with_shininess(shininess)
+                .with_transparency(transparency)
+                .with_refractive_index(refractive_index)),
         }
     }
 }
@@ -308,7 +336,8 @@ struct ObjectRepr {
     transform: Vec<TransformRepr>,
 }
 
-/// Generates a list of objects from their representations.
+/// Generates a list of objects from their representations. Since some of the representations might
+/// contain references, we need to pass in maps for materials and transformations.
 fn generate_objects(
     xs: &[ObjectRepr],
     mats: &HashMap<String, Material>,
@@ -316,7 +345,7 @@ fn generate_objects(
 ) -> Result<Vec<Object>, ErrParseYaml> {
     let mut res: Vec<Object> = vec![];
     for x in xs {
-        // Get the material.
+        // For each object, we need to get the material, transformation, and the shape.
         let mat = match &x.material {
             MaterialDefn::Ref(name) => mats
                 .get(name)
@@ -329,6 +358,7 @@ fn generate_objects(
                 specular,
                 reflective,
             } => {
+                // TODO: find a better way to do this. Very awkward now.
                 let mat = Material::default();
                 Material::default()
                     .with_color(color.map(|c| c.into()).unwrap_or(mat.color().into()))
@@ -339,7 +369,6 @@ fn generate_objects(
             }
         };
 
-        // Get the transformation.
         let mut transform = Tr::new();
         for tr in &x.transform {
             let x = match tr {
@@ -352,7 +381,6 @@ fn generate_objects(
             transform = transform.and(x);
         }
 
-        // Finally, get the shape.
         let shape = match x.typ {
             Shape::Plane => Plane::default()
                 .with_material(mat)
@@ -368,6 +396,16 @@ fn generate_objects(
     }
 
     Ok(res)
+}
+
+/// Given a YAML string, generates a PPM string representing the rendered world.
+pub fn gen_world(yml: &str) -> Result<String, ErrParseYaml> {
+    let data = serde_yaml::from_str::<Data>(yml).map_err(|e| ErrParseYaml::SerdeError(e))?;
+    let objects = generate_objects(&data.objects, &data.materials.0, &data.transforms.0)?;
+
+    let world = World::new().with_light(data.light).with_objects(objects);
+    let output = data.camera.render(&world);
+    Ok(output.to_ppm())
 }
 
 #[cfg(test)]
@@ -387,6 +425,7 @@ mod tests {
     /// A complete definition of a world in YAML.
     const TEST_YAML: &str = include_str!("./spec.yml");
 
+    // Here are the expected results from some of the sections of the YAML file.
     lazy_static! {
         static ref CAMERA: Camera = Camera::new(100, 100, 0.785).with_transform(view_transform(
             p!(-6, 6, -10),
@@ -596,8 +635,33 @@ large:
             light: *LIGHT,
             materials: Materials(MATERIALS.clone()),
             transforms: Transforms(TRANSFORMS.clone()),
+            // TODO: this is not legit. We need to check if the two vectors contain the same
+            // elements, not that they are exactly equal.
+            objects: vec![
+                ObjectRepr {
+                    typ: Shape::Sphere,
+                    material: MaterialDefn::Ref("white".to_string()),
+                    transform: vec![TransformRepr::Ref("large".to_string())],
+                },
+                ObjectRepr {
+                    typ: Shape::Plane,
+                    material: MaterialDefn::Defined {
+                        color: Some((1.0, 1.0, 1.0)),
+                        ambient: Some(1.0),
+                        diffuse: Some(0.0),
+                        specular: Some(0.0),
+                        reflective: None,
+                    },
+                    transform: vec![
+                        TransformRepr::OneParam("rotate_x".to_string(), 1.5707963267948966),
+                        TransformRepr::ThreeParam("translate".to_string(), 0.0, 0.0, 500.0),
+                    ],
+                },
+            ],
         };
 
         assert_eq!(got, want);
     }
+
+    // TODO test what happens if some key is not defined!
 }

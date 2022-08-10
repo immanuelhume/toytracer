@@ -8,7 +8,6 @@ use toytracer::light::{Material, PointLight};
 use toytracer::patterns::Checkers;
 use toytracer::shapes::{Plane, Sphere};
 use toytracer::transform::{view_transform, Tr};
-use toytracer::tuple::{Point, Vector};
 use toytracer::world::World;
 use toytracer::{file_exists, p, pad_filepath, v};
 
@@ -87,7 +86,7 @@ fn main() {
                     .with_specular(1.0)
                     .with_reflective(0.9)
                     .with_transparency(0.9)
-                    .with_refractive_index(1.5),
+                    .with_refractive_index(1.01),
             )
             .with_transform(
                 Tr::default()
@@ -107,7 +106,7 @@ fn main() {
                     .with_shininess(300.0)
                     .with_transparency(0.9)
                     .with_reflective(0.9)
-                    .with_refractive_index(2.0),
+                    .with_refractive_index(1.01),
             )
             .with_transform(
                 Tr::default()
@@ -127,7 +126,7 @@ fn main() {
                     .with_ambient(0.0)
                     .with_transparency(0.9)
                     .with_reflective(0.2)
-                    .with_refractive_index(2.0),
+                    .with_refractive_index(1.005),
             )
             .with_transform(
                 Tr::default()

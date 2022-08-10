@@ -41,5 +41,5 @@ objects:
       diffuse: 0
       specular: 0
     transform:
-      - [ rotate-x, 1.5707963267948966 ] # pi/2
+      - [ rotate_x, 1.5707963267948966 ] # pi/2
       - [ translate, 0, 0, 500 ]
